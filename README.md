@@ -10,6 +10,10 @@ only after you've actually met up and done something together.
 3. **After the plan happens, both sides confirm attendance.** Once you *and* the other person
    both confirm you met, a match unlocks and you can chat.
 
+It's a PWA — open it on your phone and use the browser's "Add to Home Screen" option to install
+it like an app (works best on Android/Chrome; iOS/Safari supports install but not push
+notifications).
+
 ## Stack
 
 - **Backend** (`server/`): Express + `node:sqlite` (Node's built-in SQLite driver — no native

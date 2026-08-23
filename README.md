@@ -14,6 +14,21 @@ It's a PWA — open it on your phone and use the browser's "Add to Home Screen" 
 it like an app (works best on Android/Chrome; iOS/Safari supports install but not push
 notifications).
 
+## Invite-only access
+
+For testing within a closed circle (friends, a small community) rather than the open internet,
+set an `INVITE_CODE` environment variable to a passphrase you share directly with people you
+invite. Once set, signup requires that code — no code set (the default) means signup is open,
+which is fine for local development but not for a real closed-circle launch.
+
+- **Locally:** add `INVITE_CODE=whatever-you-want` to your shell before `npm run dev` in `server/`.
+- **On Render:** the `render.yaml` Blueprint prompts you to set `INVITE_CODE` when you deploy
+  (it's marked `sync: false` so it's never committed to the repo). Set it there, then share the
+  same value with the people you're inviting.
+
+Rotate the code any time by changing the env var — anyone with the old code simply can't sign up
+anymore (existing accounts are unaffected).
+
 ## Stack
 
 - **Backend** (`server/`): Express + `node:sqlite` (Node's built-in SQLite driver — no native

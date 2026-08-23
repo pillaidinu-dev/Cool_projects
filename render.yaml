@@ -11,3 +11,5 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: INVITE_CODE
+        sync: false

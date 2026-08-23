@@ -67,6 +67,31 @@ All routes are under `/api` and (except signup/login) require `Authorization: Be
 | `GET /matches` | List your matches |
 | `GET/POST /matches/:id/messages` | Read or send chat messages in a match |
 
+## Deploying for private testing
+
+The server can serve the built client itself, so the whole app runs as a single Docker
+service — one URL, no separate frontend host, no CORS to configure.
+
+**Render (recommended, no CLI needed):**
+
+1. Push this repo to GitHub (already done if you're reading this from the repo).
+2. In the [Render dashboard](https://dashboard.render.com), click **New > Blueprint** and point it
+   at this repo — it will pick up `render.yaml` and provision a free web service automatically,
+   generating a `JWT_SECRET` for you.
+3. Once deployed, Render gives you a public `https://plansync-xxxx.onrender.com` URL — share that
+   with your testers.
+
+This uses Render's **free** tier: the service spins down after 15 minutes of inactivity (cold
+start on the next request), and the SQLite file is **not persisted across deploys/restarts** —
+each restart reseeds the demo data. That's fine for testing the UI/UX, but real signups and
+matches won't survive a redeploy. If you want data to persist, add a paid persistent disk in
+Render mounted at `/app/server` (or swap SQLite for a managed Postgres instance) — ask me and
+I can wire that up.
+
+**Other platforms:** the root `Dockerfile` is platform-agnostic (`docker build -t plansync .`,
+`docker run -p 4000:4000 plansync`), so this also deploys as-is to Fly.io, Railway, Google Cloud
+Run, or any other Docker-based host — same persistence caveat applies unless you attach a volume.
+
 ## Notes
 
 - `node:sqlite` is still experimental in Node — you'll see a one-line warning on server start.

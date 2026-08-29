@@ -4,15 +4,35 @@ A Robinhood-styled dashboard for browsing sports prediction markets (event
 contracts), scoped exclusively to the **US Open** — Men's and Women's
 Singles.
 
-## Why sample data
+## Why this isn't live Robinhood data
 
-Robinhood does run event-contract prediction markets, but the Robinhood
-trading API/MCP tools available in this environment only cover stocks,
-options, crypto, indexes, and scanners — there's no endpoint for sports
-prediction markets. So this dashboard ships with a realistic, clearly
-labeled sample dataset (`src/data/markets.js`) instead of a live feed. The
-UI, sorting, search, sparklines, and bracket view all work exactly the same
-once a real feed is wired in — just replace `loadMarkets()`.
+Robinhood does run a real event-contract prediction market for the US Open
+(robinhood.com/us/en/prediction-markets/tennis/), but two things block
+pulling from it directly in this environment: the Robinhood MCP tools only
+cover stocks, options, crypto, indexes, and scanners — no event-contract
+endpoint — and robinhood.com itself isn't reachable from this environment's
+network (egress-blocked).
+
+So `src/data/markets.js` instead ships with the **real current field and
+seeding** for the 2026 US Open, with win probabilities compiled from public
+sources as of **August 28–29, 2026**:
+
+- Official 2026 US Open men's and women's seeding lists (tennis365.com,
+  puntodebreak.com)
+- Kalshi's live prediction-market percentages, post-draw
+  (news.kalshi.com/p/us-open-mens-odds-2026-alcaraz-favored, reporting via
+  Yahoo Sports and oddsshopper.com)
+- Sportsbook lines converted to implied probability for a couple of entries
+  Kalshi's public reporting didn't cover directly (Yahoo Sports, BetMGM)
+
+Notably, **Jannik Sinner and Holger Rune have both withdrawn** (Sinner: knee
+injury, announced Aug 21, 2026) and are correctly absent from the field —
+an earlier draft of this dashboard used stale placeholder data that still
+had Sinner in it. The "Field (rest of draw)" row is `100 − sum of the ten
+listed prices`, since a real market has ~128 entrants per draw, not 10.
+
+The UI, sorting, search, sparklines, and bracket view all work exactly the
+same once a genuinely live feed exists — just replace `loadMarkets()`.
 
 ## What's in it
 

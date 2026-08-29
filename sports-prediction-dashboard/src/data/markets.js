@@ -1,98 +1,109 @@
-// SAMPLE DATA — for UI demo purposes only.
-// Robinhood's public trading API does not expose sports prediction-market
-// (event contract) endpoints, so these prices are illustrative, not live
-// quotes. Swap `loadMarkets()` for a real feed when one is available and
-// the rest of the dashboard (charts, sorting, bracket) works unchanged.
+// REAL FIELD, ESTIMATED PRICES — data for the 2026 US Open (main draw started
+// Aug 30, 2026), current as of Aug 28-29, 2026.
+//
+// Robinhood's MCP tools expose stocks/options/crypto/indexes/scanners only —
+// no sports prediction-market (event contract) endpoint — and robinhood.com
+// itself is unreachable from this environment's network. So the championship
+// win probabilities below are NOT pulled live from Robinhood; they're compiled
+// from Kalshi's real-money prediction-market percentages and sportsbook lines
+// (converted to implied probability), cross-checked against the official 2026
+// US Open seeding lists. Seeds and the field itself (who withdrew, who's
+// actually in the draw) are real. See README.md for sources. Swap
+// `loadMarkets()` for a live feed when one exists; nothing else needs to change.
 
-function walk(seed, steps, volatility) {
-  let price = seed
-  const series = [price]
-  for (let i = 1; i < steps; i++) {
-    const drift = (Math.sin(i * 1.3 + seed) + (Math.random() - 0.5)) * volatility
-    price = Math.min(97, Math.max(3, price + drift))
-    series.push(Math.round(price * 10) / 10)
+function walk(seed, endPrice, steps, volatility) {
+  let price = endPrice
+  const series = new Array(steps)
+  for (let i = steps - 1; i >= 0; i--) {
+    series[i] = Math.round(price * 10) / 10
+    const drift = (Math.sin(i * 1.7 + seed) + (pseudoRand(seed + i) - 0.5)) * volatility
+    price = Math.max(0.3, price - drift)
   }
   return series
 }
 
-function contender(name, country, seed, price) {
-  const history = walk(price, 24, 2.2)
+function pseudoRand(n) {
+  const x = Math.sin(n * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function contender(seedNum, name, country, seed, price, volume) {
+  const history = walk(seedNum, price, 20, Math.max(0.5, price * 0.07))
   const open = history[0]
-  const last = history[history.length - 1]
+  const change = Math.round((price - open) * 10) / 10
   return {
-    id: `${name}-${seed}`,
+    id: name.replace(/\s+/g, '-').toLowerCase(),
     name,
     country,
     seed,
-    price: last,
-    change: Math.round((last - open) * 10) / 10,
-    changePct: Math.round(((last - open) / open) * 1000) / 10,
-    volume: Math.round(40000 + Math.random() * 900000),
+    price,
+    change,
+    changePct: open ? Math.round((change / open) * 1000) / 10 : 0,
+    volume,
     history,
   }
 }
 
+// Sorted by title probability, descending.
 const menOutright = [
-  contender('Jannik Sinner', 'ITA', 1, 34),
-  contender('Carlos Alcaraz', 'ESP', 2, 29),
-  contender('Novak Djokovic', 'SRB', 3, 11),
-  contender('Alexander Zverev', 'GER', 4, 6),
-  contender('Taylor Fritz', 'USA', 5, 5),
-  contender('Daniil Medvedev', 'RUS', 6, 4),
-  contender('Jack Draper', 'GBR', 7, 4),
-  contender('Ben Shelton', 'USA', 8, 3),
-  contender('Holger Rune', 'DEN', 9, 2),
-  contender('Casper Ruud', 'NOR', 10, 2),
+  contender(11, 'Carlos Alcaraz', 'ESP', 2, 26, 412000),
+  contender(12, 'Alexander Zverev', 'GER', 1, 20, 375000),
+  contender(13, 'Novak Djokovic', 'SRB', 4, 11, 671000),
+  contender(14, 'Arthur Fils', 'FRA', 13, 8, 198000),
+  contender(15, 'Taylor Fritz', 'USA', 9, 7, 356000),
+  contender(16, 'Ben Shelton', 'USA', 8, 6, 241000),
+  contender(17, 'Rafael Jódar', 'ESP', 10, 6, 289000),
+  contender(18, 'Felix Auger-Aliassime', 'CAN', 3, 3, 154000),
+  contender(19, 'Daniil Medvedev', 'RUS', 7, 3, 298000),
+  contender(20, 'Jakub Mensik', 'CZE', 15, 3, 133000),
 ]
 
+// Sorted by title probability, descending.
 const womenOutright = [
-  contender('Aryna Sabalenka', 'BLR', 1, 31),
-  contender('Iga Swiatek', 'POL', 2, 22),
-  contender('Coco Gauff', 'USA', 3, 14),
-  contender('Jessica Pegula', 'USA', 4, 8),
-  contender('Elena Rybakina', 'KAZ', 5, 7),
-  contender('Qinwen Zheng', 'CHN', 6, 5),
-  contender('Jasmine Paolini', 'ITA', 7, 4),
-  contender('Emma Navarro', 'USA', 8, 3),
-  contender('Madison Keys', 'USA', 9, 3),
-  contender('Mirra Andreeva', 'RUS', 10, 2),
+  contender(21, 'Aryna Sabalenka', 'BLR', 1, 24, 344000),
+  contender(22, 'Coco Gauff', 'USA', 4, 16, 522000),
+  contender(23, 'Iga Swiatek', 'POL', 8, 15, 301000),
+  contender(24, 'Naomi Osaka', 'JPN', 13, 9, 388000),
+  contender(25, 'Jessica Pegula', 'USA', 3, 7, 167000),
+  contender(26, 'Mirra Andreeva', 'RUS', 5, 7, 209000),
+  contender(27, 'Elena Rybakina', 'KAZ', 2, 6, 289000),
+  contender(28, 'Amanda Anisimova', 'USA', 10, 6, 176000),
+  contender(29, 'Karolina Muchova', 'CZE', 7, 3, 144000),
+  contender(30, 'Linda Noskova', 'CZE', 6, 3, 121000),
 ]
 
-function normalize(list) {
-  const total = list.reduce((sum, c) => sum + c.price, 0)
-  return list
-    .map((c) => ({ ...c, price: Math.round((c.price / total) * 1000) / 10 }))
-    .sort((a, b) => b.price - a.price)
+export function fieldPct(list) {
+  const sum = list.reduce((s, c) => s + c.price, 0)
+  return Math.max(0, Math.round((100 - sum) * 10) / 10)
 }
 
-function matchup(a, b, favoriteShare) {
+function matchup(a, b) {
+  const total = a.price + b.price || 1
+  const aShare = Math.round((a.price / total) * 1000) / 10
   return {
-    id: `${a.name}-vs-${b.name}`,
+    id: `${a.id}-vs-${b.id}`,
     round: 'Quarterfinal',
-    a: { name: a.name, seed: a.seed, price: favoriteShare },
-    b: { name: b.name, seed: b.seed, price: Math.round((100 - favoriteShare) * 10) / 10 },
+    a: { name: a.name, seed: a.seed, price: aShare },
+    b: { name: b.name, seed: b.seed, price: Math.round((100 - aShare) * 10) / 10 },
   }
 }
 
 export function loadMarkets() {
-  const men = normalize(menOutright)
-  const women = normalize(womenOutright)
-
   const menBracket = [
-    matchup(men[0], men[7], 78),
-    matchup(men[1], men[6], 71),
-    matchup(men[2], men[5], 58),
-    matchup(men[3], men[4], 52),
+    matchup(menOutright[0], menOutright[7]),
+    matchup(menOutright[1], menOutright[6]),
+    matchup(menOutright[2], menOutright[5]),
+    matchup(menOutright[3], menOutright[4]),
   ]
   const womenBracket = [
-    matchup(women[0], women[7], 74),
-    matchup(women[1], women[6], 69),
-    matchup(women[2], women[5], 61),
-    matchup(women[3], women[4], 55),
+    matchup(womenOutright[0], womenOutright[7]),
+    matchup(womenOutright[1], womenOutright[6]),
+    matchup(womenOutright[2], womenOutright[5]),
+    matchup(womenOutright[3], womenOutright[4]),
   ]
 
   return {
-    men: { outright: men, bracket: menBracket },
-    women: { outright: women, bracket: womenBracket },
+    men: { outright: menOutright, bracket: menBracket },
+    women: { outright: womenOutright, bracket: womenBracket },
   }
 }

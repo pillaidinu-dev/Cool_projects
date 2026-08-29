@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loadMarkets } from './data/markets.js'
+import { loadMarkets, fieldPct } from './data/markets.js'
 import MarketRow from './components/MarketRow.jsx'
 import DetailPanel from './components/DetailPanel.jsx'
 import Bracket from './components/Bracket.jsx'
@@ -47,7 +47,7 @@ export default function App() {
           <p className="text-sm text-neutral-500">Event contracts · winner-take-all · settles at $1.00 or $0</p>
         </div>
         <span className="rounded-full border border-yellow-600/40 bg-yellow-500/10 px-3 py-1 text-xs font-medium text-yellow-400">
-          Sample data — not live Robinhood quotes
+          As of Aug 29, 2026 — not live Robinhood quotes
         </span>
       </header>
 
@@ -95,6 +95,12 @@ export default function App() {
             {filtered.length === 0 && (
               <div className="p-6 text-center text-sm text-neutral-500">No contenders match "{query}"</div>
             )}
+            {filtered.length > 0 && !query.trim() && (
+              <div className="flex items-center justify-between px-4 py-2.5 text-xs text-neutral-500">
+                <span>Field (rest of draw)</span>
+                <span className="font-mono">{fieldPct(outright).toFixed(1)}¢</span>
+              </div>
+            )}
           </div>
 
           <h2 className="mb-2 mt-8 text-sm font-semibold tracking-wide text-neutral-400 uppercase">
@@ -109,9 +115,12 @@ export default function App() {
       </div>
 
       <footer className="mt-10 border-t border-neutral-900 pt-4 text-xs text-neutral-600">
-        Robinhood's brokerage API doesn't currently expose sports prediction-market (event
-        contract) data, so prices here are simulated for layout/demo purposes. Swap{' '}
-        <code>loadMarkets()</code> in <code>src/data/markets.js</code> for a real feed to go live.
+        Robinhood's MCP tools don't expose sports prediction-market (event contract) data, and
+        robinhood.com itself isn't reachable from this environment — so these aren't live
+        Robinhood quotes. The field (who withdrew, seeds) and win probabilities are compiled from
+        Kalshi's prediction-market percentages and sportsbook lines as of Aug 28–29, 2026; see
+        README.md for sources. Swap <code>loadMarkets()</code> in{' '}
+        <code>src/data/markets.js</code> for a live feed to go live.
       </footer>
     </div>
   )

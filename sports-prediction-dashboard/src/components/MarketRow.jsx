@@ -1,9 +1,9 @@
 import Sparkline from './Sparkline.jsx'
 
 const flags = {
-  ITA: '🇮🇹', ESP: '🇪🇸', SRB: '🇷🇸', GER: '🇩🇪', USA: '🇺🇸',
-  RUS: '🇷🇺', GBR: '🇬🇧', DEN: '🇩🇰', NOR: '🇳🇴', BLR: '🇧🇾',
-  POL: '🇵🇱', KAZ: '🇰🇿', CHN: '🇨🇳',
+  ESP: '🇪🇸', SRB: '🇷🇸', GER: '🇩🇪', USA: '🇺🇸', RUS: '🇷🇺',
+  BLR: '🇧🇾', POL: '🇵🇱', KAZ: '🇰🇿', FRA: '🇫🇷', CAN: '🇨🇦',
+  CZE: '🇨🇿', JPN: '🇯🇵',
 }
 
 export default function MarketRow({ contender, selected, onSelect }) {

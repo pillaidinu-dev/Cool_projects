@@ -11,3 +11,13 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: INVITE_CODE
+        sync: false
+
+  - type: web
+    name: nfl-dashboard
+    env: docker
+    dockerfilePath: ./nfl-dashboard/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health

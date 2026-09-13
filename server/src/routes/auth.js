@@ -10,10 +10,16 @@ function publicUser(u) {
 }
 
 router.post('/signup', (req, res) => {
-  const { email, password, name, bio } = req.body || {};
+  const { email, password, name, bio, inviteCode } = req.body || {};
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'email, password, and name are required' });
   }
+
+  const requiredInviteCode = process.env.INVITE_CODE;
+  if (requiredInviteCode && inviteCode !== requiredInviteCode) {
+    return res.status(403).json({ error: 'Invalid invite code' });
+  }
+
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
   if (existing) return res.status(409).json({ error: 'An account with that email already exists' });
 

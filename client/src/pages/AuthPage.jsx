@@ -4,7 +4,7 @@ import { useAuth } from '../AuthContext';
 
 export default function AuthPage() {
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ email: '', password: '', name: '', bio: '' });
+  const [form, setForm] = useState({ email: '', password: '', name: '', bio: '', inviteCode: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const { login, signup } = useAuth();
@@ -96,6 +96,14 @@ export default function AuthPage() {
                 value={form.bio}
                 onChange={update('bio')}
                 rows={2}
+              />
+            )}
+            {mode === 'signup' && (
+              <input
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                placeholder="Invite code (ask whoever invited you)"
+                value={form.inviteCode}
+                onChange={update('inviteCode')}
               />
             )}
 

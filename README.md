@@ -1,4 +1,15 @@
-# PlanSync
+# Cool Projects
+
+A collection of small, independent projects, each self-contained in its own top-level directory
+with its own client/server, README, and Dockerfile.
+
+- **[PlanSync](#plansync)** (`client/`, `server/`) — an activity-based matching dating app.
+- **[NFL Sunday Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for NFL
+  Sunday scores, stat leaders, and touchdown scorers.
+
+---
+
+## PlanSync
 
 A dating app built around a different mechanic: no swiping on photos. You match with someone
 only after you've actually met up and done something together.
@@ -9,6 +20,25 @@ only after you've actually met up and done something together.
    accepted group.
 3. **After the plan happens, both sides confirm attendance.** Once you *and* the other person
    both confirm you met, a match unlocks and you can chat.
+
+It's a PWA — open it on your phone and use the browser's "Add to Home Screen" option to install
+it like an app (works best on Android/Chrome; iOS/Safari supports install but not push
+notifications).
+
+## Invite-only access
+
+For testing within a closed circle (friends, a small community) rather than the open internet,
+set an `INVITE_CODE` environment variable to a passphrase you share directly with people you
+invite. Once set, signup requires that code — no code set (the default) means signup is open,
+which is fine for local development but not for a real closed-circle launch.
+
+- **Locally:** add `INVITE_CODE=whatever-you-want` to your shell before `npm run dev` in `server/`.
+- **On Render:** the `render.yaml` Blueprint prompts you to set `INVITE_CODE` when you deploy
+  (it's marked `sync: false` so it's never committed to the repo). Set it there, then share the
+  same value with the people you're inviting.
+
+Rotate the code any time by changing the env var — anyone with the old code simply can't sign up
+anymore (existing accounts are unaffected).
 
 ## Stack
 

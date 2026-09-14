@@ -19,7 +19,7 @@ function ChartTooltip({ active, payload, unit }) {
   );
 }
 
-export default function ProjectionChart({ title, unit, accent, rows }) {
+export default function ProjectionChart({ title, unit, accent, rows, emptyMessage = 'No projections yet.' }) {
   const data = rows.map((r) => ({
     ...r,
     label: `${r.name}`,
@@ -34,7 +34,7 @@ export default function ProjectionChart({ title, unit, accent, rows }) {
         <span className="text-xs text-slate-500">{unit}</span>
       </div>
       {data.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-slate-500">No projections yet.</p>
+        <p className="px-4 py-6 text-sm text-slate-500">{emptyMessage}</p>
       ) : (
         <div style={{ width: '100%', height }} className="pt-2 pb-1 pr-4">
           <ResponsiveContainer>

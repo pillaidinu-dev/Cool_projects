@@ -75,7 +75,11 @@ def build_projections(year, week):
             "rushing": [],
             "receiving": [],
             "touchdowns": [],
-            "note": "No completed games yet this season — projections need at least one prior week of data.",
+            "note": (
+                f"No games have finished yet this season, so there's no history to project Week "
+                f"{week} from — this fills in automatically once Week 1 wraps up (including "
+                f"Monday Night Football)."
+            ),
         }
 
     gamelogs["td_total"] = gamelogs["rush_td"] + gamelogs["rec_td"]

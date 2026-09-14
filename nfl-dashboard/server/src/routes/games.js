@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getScoreboard } from '../espn.js';
+import { getWeekScoreboard } from '../espn.js';
 
 const router = Router();
 
@@ -35,9 +35,16 @@ function summarizeGame(event) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const data = await getScoreboard(req.query.date);
-    const games = (data.events || []).map(summarizeGame);
-    res.json({ date: data.day?.date ?? null, games });
+    const data = await getWeekScoreboard(req.query.date);
+    const days = data.days
+      .map((day) => ({ date: day.date, games: day.events.map(summarizeGame) }))
+      .filter((day) => day.games.length > 0);
+    res.json({
+      weekStart: data.weekStart,
+      weekEnd: data.weekEnd,
+      days,
+      errors: data.errors,
+    });
   } catch (err) {
     next(err);
   }

@@ -1,18 +1,24 @@
-# NFL Sunday Live
+# NFL Week Live
 
-A live dashboard for NFL Sunday games: scores, passing/rushing/receiving leaders, and a
-touchdown-scorer feed. It polls the backend every 20 seconds so scores and stats update
-automatically while games are in progress.
+A live dashboard for a full NFL week (Thursday through Monday): scores, passing/rushing/receiving
+leaders, and a touchdown-scorer feed. It polls the backend every 20 seconds so scores and stats
+update automatically while games are in progress.
 
 ## What it shows
 
-- **Scoreboard** — every game on the most recent Sunday, with live score, quarter/clock (or
-  final/scheduled status) and team records.
+The **Scoreboard & Leaders** tab:
+
+- **Scoreboard** — every game across the current NFL week (Thu/Fri/Sat/Sun/Mon), grouped by day,
+  with live score, quarter/clock (or final/scheduled status) and team records.
 - **Passing leaders** — QB completions/attempts, yards, TDs, interceptions.
 - **Rushing leaders** — carries, yards, TDs.
 - **Receiving leaders** — split into WR and TE tables, with receptions, yards, TDs.
-- **Touchdown feed** — every touchdown scored across the day's games, newest first, pulled from
-  each game's scoring plays.
+
+The **Touchdowns** tab:
+
+- **Touchdown scorers** — every player who scored this week, ranked by touchdown count.
+- **Touchdown feed** — the play-by-play behind that: every touchdown scored across the week's
+  games, newest first, pulled from each game's scoring plays.
 
 ## Data source
 
@@ -43,14 +49,16 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. On a Sunday during the season this shows that day's live games; on
-any other day it shows the most recently completed Sunday.
+Open http://localhost:5173. It always shows the current NFL week (Thursday through the following
+Monday) — during game days that's live/in-progress games; between weeks it shows the week that
+just finished, until the next Thursday's games kick off.
 
 ## Notes / limitations
 
-- Only regular NFL game days map cleanly onto "Sunday" — Thursday/Monday night games and
-  Saturday slates aren't shown by this dashboard by design (pass `?date=YYYYMMDD` to the API
-  routes to look at a different day, e.g. for testing).
+- "Week" is defined as Thursday through Monday (UTC calendar days), which covers the standard
+  Thu/Sun/Mon slate plus the Friday/Saturday games that show up late in the season (Thanksgiving,
+  Christmas, week 18). Pass `?date=YYYYMMDD` to the API routes to look at the week containing a
+  different date, e.g. for testing a past week.
 - Player position (WR vs TE) comes from ESPN's roster data; if it's ever missing for a player,
   they're bucketed into the WR table rather than dropped.
 - This depends on an unofficial, undocumented ESPN endpoint. It's the same data source widely

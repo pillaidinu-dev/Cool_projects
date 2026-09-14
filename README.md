@@ -1,4 +1,15 @@
-# PlanSync
+# Cool Projects
+
+A collection of small, independent projects, each self-contained in its own top-level directory
+with its own client/server, README, and Dockerfile.
+
+- **[PlanSync](#plansync)** (`client/`, `server/`) — an activity-based matching dating app.
+- **[NFL Week Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for a full
+  NFL week's scores, stat leaders, and touchdown scorers.
+
+---
+
+## PlanSync
 
 A dating app built around a different mechanic: no swiping on photos. You match with someone
 only after you've actually met up and done something together.

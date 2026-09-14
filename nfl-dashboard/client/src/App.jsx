@@ -1,13 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchGames, fetchLeaders } from './api.js';
+import { fetchGames, fetchLeaders, fetchPredictions } from './api.js';
 import ScoreboardCard from './components/ScoreboardCard.jsx';
 import LeadersTable from './components/LeadersTable.jsx';
 import TouchdownFeed from './components/TouchdownFeed.jsx';
 import TouchdownScorers from './components/TouchdownScorers.jsx';
+import ProjectionChart from './components/ProjectionChart.jsx';
+import TouchdownProbability from './components/TouchdownProbability.jsx';
 
 const TABS = [
   { key: 'scoreboard', label: 'Scoreboard & Leaders' },
   { key: 'touchdowns', label: 'Touchdowns' },
+  { key: 'projections', label: 'Projections' },
 ];
 
 const REFRESH_MS = 20_000;
@@ -43,6 +46,7 @@ const RECEIVING_COLUMNS = [
 export default function App() {
   const [days, setDays] = useState([]);
   const [leaders, setLeaders] = useState({ passing: [], rushing: [], receiving: [], touchdowns: [] });
+  const [predictions, setPredictions] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,9 +54,14 @@ export default function App() {
 
   const refresh = useCallback(async () => {
     try {
-      const [gamesData, leadersData] = await Promise.all([fetchGames(), fetchLeaders()]);
+      const [gamesData, leadersData, predictionsData] = await Promise.all([
+        fetchGames(),
+        fetchLeaders(),
+        fetchPredictions(),
+      ]);
       setDays(gamesData.days || []);
       setLeaders(leadersData);
+      setPredictions(predictionsData);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -138,6 +147,48 @@ export default function App() {
           <section className="grid gap-6 lg:grid-cols-2 items-start">
             <TouchdownScorers touchdowns={leaders.touchdowns} />
             <TouchdownFeed touchdowns={leaders.touchdowns} />
+          </section>
+        )}
+
+        {tab === 'projections' && predictions && (
+          <section className="flex flex-col gap-6">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+                Week {predictions.week ?? '–'} Projections
+              </h2>
+              <p className="text-xs text-slate-500">
+                Ridge/Poisson regression trained on every game played so far this season — rolling
+                form, season average, home/away, and strength of upcoming opponent.
+                {predictions.metrics?.passingMAE != null && (
+                  <>
+                    {' '}
+                    Backtested MAE: {predictions.metrics.passingMAE} pass yds ·{' '}
+                    {predictions.metrics.rushingMAE} rush yds · {predictions.metrics.receivingMAE} rec yds.
+                  </>
+                )}
+              </p>
+              {predictions.isSample && (
+                <p className="text-xs text-amber-400 mt-1">
+                  Sample projections from synthetic data — run{' '}
+                  <code className="text-amber-300">ml/train.py</code> against live ESPN data for real ones.
+                </p>
+              )}
+              {predictions.note && !predictions.isSample && (
+                <p className="text-xs text-slate-500 mt-1">{predictions.note}</p>
+              )}
+            </div>
+
+            <section className="grid gap-6 lg:grid-cols-2">
+              <ProjectionChart title="Passing Yards (QB)" unit="yds" accent="#38bdf8" rows={predictions.passing} />
+              <ProjectionChart title="Rushing Yards (RB)" unit="yds" accent="#f59e0b" rows={predictions.rushing} />
+              <ProjectionChart
+                title="Receiving Yards (WR/TE)"
+                unit="yds"
+                accent="#a78bfa"
+                rows={predictions.receiving}
+              />
+              <TouchdownProbability rows={predictions.touchdowns} />
+            </section>
           </section>
         )}
       </main>

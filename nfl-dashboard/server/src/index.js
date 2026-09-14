@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import gamesRoutes from './routes/games.js';
 import leadersRoutes from './routes/leaders.js';
+import predictionsRoutes from './routes/predictions.js';
+import { startWeeklyRetraining } from './predictions.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -13,6 +15,9 @@ app.use(cors());
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/games', gamesRoutes);
 app.use('/api/leaders', leadersRoutes);
+app.use('/api/predictions', predictionsRoutes);
+
+startWeeklyRetraining();
 
 // When the client has been built alongside this server (e.g. in the
 // production Docker image), serve it directly.

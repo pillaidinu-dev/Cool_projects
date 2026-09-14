@@ -1,0 +1,432 @@
+{
+  "season": 2026,
+  "week": 7,
+  "metrics": {
+    "passingMAE": 38.8,
+    "rushingMAE": 36.6,
+    "receivingMAE": 30.4
+  },
+  "passing": [
+    {
+      "name": "DDD QB1",
+      "team": "DDD",
+      "position": "QB",
+      "opponent": "CCC",
+      "projection": 245.2,
+      "low": 206.2,
+      "high": 284.3
+    },
+    {
+      "name": "BBB QB1",
+      "team": "BBB",
+      "position": "QB",
+      "opponent": "AAA",
+      "projection": 238.7,
+      "low": 199.7,
+      "high": 277.7
+    },
+    {
+      "name": "CCC QB1",
+      "team": "CCC",
+      "position": "QB",
+      "opponent": "DDD",
+      "projection": 225.6,
+      "low": 186.5,
+      "high": 264.6
+    },
+    {
+      "name": "AAA QB1",
+      "team": "AAA",
+      "position": "QB",
+      "opponent": "BBB",
+      "projection": 221.4,
+      "low": 182.4,
+      "high": 260.4
+    }
+  ],
+  "rushing": [
+    {
+      "name": "AAA RB2",
+      "team": "AAA",
+      "position": "RB",
+      "opponent": "BBB",
+      "projection": 90.5,
+      "low": 55.6,
+      "high": 125.4
+    },
+    {
+      "name": "AAA RB1",
+      "team": "AAA",
+      "position": "RB",
+      "opponent": "BBB",
+      "projection": 75.5,
+      "low": 40.7,
+      "high": 110.4
+    },
+    {
+      "name": "BBB RB1",
+      "team": "BBB",
+      "position": "RB",
+      "opponent": "AAA",
+      "projection": 56.3,
+      "low": 21.4,
+      "high": 91.2
+    },
+    {
+      "name": "BBB RB2",
+      "team": "BBB",
+      "position": "RB",
+      "opponent": "AAA",
+      "projection": 55.8,
+      "low": 20.9,
+      "high": 90.7
+    },
+    {
+      "name": "CCC RB2",
+      "team": "CCC",
+      "position": "RB",
+      "opponent": "DDD",
+      "projection": 51.8,
+      "low": 16.9,
+      "high": 86.7
+    },
+    {
+      "name": "CCC RB1",
+      "team": "CCC",
+      "position": "RB",
+      "opponent": "DDD",
+      "projection": 48.8,
+      "low": 13.9,
+      "high": 83.7
+    },
+    {
+      "name": "DDD RB1",
+      "team": "DDD",
+      "position": "RB",
+      "opponent": "CCC",
+      "projection": 47.2,
+      "low": 12.3,
+      "high": 82.1
+    },
+    {
+      "name": "DDD RB2",
+      "team": "DDD",
+      "position": "RB",
+      "opponent": "CCC",
+      "projection": 44.0,
+      "low": 9.1,
+      "high": 78.9
+    }
+  ],
+  "receiving": [
+    {
+      "name": "DDD TE1",
+      "team": "DDD",
+      "position": "TE",
+      "opponent": "CCC",
+      "projection": 65.2,
+      "low": 32.4,
+      "high": 98.1
+    },
+    {
+      "name": "DDD WR1",
+      "team": "DDD",
+      "position": "WR",
+      "opponent": "CCC",
+      "projection": 64.2,
+      "low": 31.4,
+      "high": 97.1
+    },
+    {
+      "name": "BBB WR1",
+      "team": "BBB",
+      "position": "WR",
+      "opponent": "AAA",
+      "projection": 62.5,
+      "low": 29.7,
+      "high": 95.4
+    },
+    {
+      "name": "BBB WR2",
+      "team": "BBB",
+      "position": "WR",
+      "opponent": "AAA",
+      "projection": 62.2,
+      "low": 29.3,
+      "high": 95.0
+    },
+    {
+      "name": "BBB TE1",
+      "team": "BBB",
+      "position": "TE",
+      "opponent": "AAA",
+      "projection": 61.3,
+      "low": 28.5,
+      "high": 94.1
+    },
+    {
+      "name": "BBB WR3",
+      "team": "BBB",
+      "position": "WR",
+      "opponent": "AAA",
+      "projection": 60.9,
+      "low": 28.1,
+      "high": 93.8
+    },
+    {
+      "name": "DDD WR2",
+      "team": "DDD",
+      "position": "WR",
+      "opponent": "CCC",
+      "projection": 58.3,
+      "low": 25.5,
+      "high": 91.2
+    },
+    {
+      "name": "CCC WR1",
+      "team": "CCC",
+      "position": "WR",
+      "opponent": "DDD",
+      "projection": 55.9,
+      "low": 23.1,
+      "high": 88.8
+    },
+    {
+      "name": "DDD WR3",
+      "team": "DDD",
+      "position": "WR",
+      "opponent": "CCC",
+      "projection": 55.6,
+      "low": 22.8,
+      "high": 88.5
+    },
+    {
+      "name": "CCC WR3",
+      "team": "CCC",
+      "position": "WR",
+      "opponent": "DDD",
+      "projection": 54.5,
+      "low": 21.7,
+      "high": 87.4
+    },
+    {
+      "name": "AAA TE1",
+      "team": "AAA",
+      "position": "TE",
+      "opponent": "BBB",
+      "projection": 54.5,
+      "low": 21.6,
+      "high": 87.3
+    },
+    {
+      "name": "CCC WR2",
+      "team": "CCC",
+      "position": "WR",
+      "opponent": "DDD",
+      "projection": 52.6,
+      "low": 19.7,
+      "high": 85.4
+    },
+    {
+      "name": "AAA WR1",
+      "team": "AAA",
+      "position": "WR",
+      "opponent": "BBB",
+      "projection": 52.2,
+      "low": 19.4,
+      "high": 85.1
+    },
+    {
+      "name": "AAA WR2",
+      "team": "AAA",
+      "position": "WR",
+      "opponent": "BBB",
+      "projection": 52.2,
+      "low": 19.4,
+      "high": 85.1
+    },
+    {
+      "name": "CCC TE1",
+      "team": "CCC",
+      "position": "TE",
+      "opponent": "DDD",
+      "projection": 49.4,
+      "low": 16.6,
+      "high": 82.3
+    },
+    {
+      "name": "AAA WR3",
+      "team": "AAA",
+      "position": "WR",
+      "opponent": "BBB",
+      "projection": 47.7,
+      "low": 14.8,
+      "high": 80.5
+    }
+  ],
+  "touchdowns": [
+    {
+      "name": "AAA QB1",
+      "team": "AAA",
+      "position": "QB",
+      "opponent": "BBB",
+      "expectedTouchdowns": 0.2,
+      "probability": 16.0
+    },
+    {
+      "name": "AAA RB1",
+      "team": "AAA",
+      "position": "RB",
+      "opponent": "BBB",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "AAA WR2",
+      "team": "AAA",
+      "position": "WR",
+      "opponent": "BBB",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "BBB QB1",
+      "team": "BBB",
+      "position": "QB",
+      "opponent": "AAA",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "BBB WR3",
+      "team": "BBB",
+      "position": "WR",
+      "opponent": "AAA",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "BBB TE1",
+      "team": "BBB",
+      "position": "TE",
+      "opponent": "AAA",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "BBB WR2",
+      "team": "BBB",
+      "position": "WR",
+      "opponent": "AAA",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "BBB WR1",
+      "team": "BBB",
+      "position": "WR",
+      "opponent": "AAA",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "AAA WR1",
+      "team": "AAA",
+      "position": "WR",
+      "opponent": "BBB",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "AAA RB2",
+      "team": "AAA",
+      "position": "RB",
+      "opponent": "BBB",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "AAA TE1",
+      "team": "AAA",
+      "position": "TE",
+      "opponent": "BBB",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "AAA WR3",
+      "team": "AAA",
+      "position": "WR",
+      "opponent": "BBB",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "BBB RB2",
+      "team": "BBB",
+      "position": "RB",
+      "opponent": "AAA",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.9
+    },
+    {
+      "name": "BBB RB1",
+      "team": "BBB",
+      "position": "RB",
+      "opponent": "AAA",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.8
+    },
+    {
+      "name": "DDD RB1",
+      "team": "DDD",
+      "position": "RB",
+      "opponent": "CCC",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.5
+    },
+    {
+      "name": "DDD QB1",
+      "team": "DDD",
+      "position": "QB",
+      "opponent": "CCC",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.5
+    },
+    {
+      "name": "DDD WR1",
+      "team": "DDD",
+      "position": "WR",
+      "opponent": "CCC",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.5
+    },
+    {
+      "name": "CCC QB1",
+      "team": "CCC",
+      "position": "QB",
+      "opponent": "DDD",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.5
+    },
+    {
+      "name": "DDD TE1",
+      "team": "DDD",
+      "position": "TE",
+      "opponent": "CCC",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.5
+    },
+    {
+      "name": "CCC WR1",
+      "team": "CCC",
+      "position": "WR",
+      "opponent": "DDD",
+      "expectedTouchdowns": 0.2,
+      "probability": 15.4
+    }
+  ],
+  "generatedAt": "2026-09-14T18:06:32.276791+00:00",
+  "isSample": true,
+  "note": "Sample projections generated from synthetic data for preview purposes. Run train.py with network access to ESPN for real projections."
+}

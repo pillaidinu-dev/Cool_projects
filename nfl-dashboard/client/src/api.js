@@ -14,3 +14,7 @@ export function fetchGames() {
 export function fetchLeaders() {
   return getJson('/api/leaders');
 }
+
+export function fetchPredictions() {
+  return getJson('/api/predictions');
+}

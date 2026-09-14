@@ -6,6 +6,13 @@ services:
     dockerContext: .
     plan: free
     healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - Dockerfile
+        - client/**
+        - server/**
+      ignoredPaths:
+        - nfl-dashboard/**
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,3 +28,6 @@ services:
     dockerContext: .
     plan: free
     healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - nfl-dashboard/**

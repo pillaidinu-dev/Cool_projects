@@ -5,7 +5,7 @@ const POSITION_COLOR = {
   QB: '#34d399',
 };
 
-export default function TouchdownProbability({ rows }) {
+export default function TouchdownProbability({ rows, emptyMessage = 'No projections yet.' }) {
   return (
     <div className="rounded-xl bg-slate-800/60 border border-slate-700/60 overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-700/60 flex items-center justify-between">
@@ -15,7 +15,7 @@ export default function TouchdownProbability({ rows }) {
         <span className="text-xs text-slate-500">this week</span>
       </div>
       {rows.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-slate-500">No projections yet.</p>
+        <p className="px-4 py-6 text-sm text-slate-500">{emptyMessage}</p>
       ) : (
         <ul className="divide-y divide-slate-700/40 max-h-[420px] overflow-y-auto">
           {rows.map((r) => (

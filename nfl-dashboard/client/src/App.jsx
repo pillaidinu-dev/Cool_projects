@@ -173,21 +173,40 @@ export default function App() {
                   <code className="text-amber-300">ml/train.py</code> against live ESPN data for real ones.
                 </p>
               )}
-              {predictions.note && !predictions.isSample && (
-                <p className="text-xs text-slate-500 mt-1">{predictions.note}</p>
-              )}
             </div>
 
+            {predictions.note && !predictions.isSample && (
+              <div className="rounded-xl bg-sky-950/40 border border-sky-800/50 px-4 py-3 text-sm text-sky-200">
+                {predictions.note}
+              </div>
+            )}
+
             <section className="grid gap-6 lg:grid-cols-2">
-              <ProjectionChart title="Passing Yards (QB)" unit="yds" accent="#38bdf8" rows={predictions.passing} />
-              <ProjectionChart title="Rushing Yards (RB)" unit="yds" accent="#f59e0b" rows={predictions.rushing} />
+              <ProjectionChart
+                title="Passing Yards (QB)"
+                unit="yds"
+                accent="#38bdf8"
+                rows={predictions.passing}
+                emptyMessage={predictions.note || 'No projections yet.'}
+              />
+              <ProjectionChart
+                title="Rushing Yards (RB)"
+                unit="yds"
+                accent="#f59e0b"
+                rows={predictions.rushing}
+                emptyMessage={predictions.note || 'No projections yet.'}
+              />
               <ProjectionChart
                 title="Receiving Yards (WR/TE)"
                 unit="yds"
                 accent="#a78bfa"
                 rows={predictions.receiving}
+                emptyMessage={predictions.note || 'No projections yet.'}
               />
-              <TouchdownProbability rows={predictions.touchdowns} />
+              <TouchdownProbability
+                rows={predictions.touchdowns}
+                emptyMessage={predictions.note || 'No projections yet.'}
+              />
             </section>
           </section>
         )}

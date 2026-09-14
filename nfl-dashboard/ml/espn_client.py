@@ -15,13 +15,31 @@ def _get(path, **params):
     return res.json()
 
 
+def _all_games_final(events):
+    """True if every game in a week's event list has already finished.
+
+    ESPN's own notion of "current week" doesn't roll forward until some
+    point after the last game (often not until Tuesday) — so on the tail
+    end of a week (e.g. Monday, right up through Monday Night Football)
+    "current" still points at a week that's otherwise fully played out. We
+    want the *next* projectable week in that case, not a week where there's
+    nothing left to project.
+    """
+    if not events:
+        return False
+    return all((e.get("status", {}).get("type", {}).get("state")) == "post" for e in events)
+
+
 def get_current_week():
-    """(year, week_number) for the week ESPN currently considers 'current'."""
+    """(year, week_number) to project — the week ESPN considers 'current',
+    advanced by one if every game in that week has already finished."""
     data = _get("scoreboard")
     year = data.get("season", {}).get("year")
     week = data.get("week", {}).get("number")
     if not year or not week:
         raise RuntimeError("Could not determine the current NFL week from ESPN's scoreboard response")
+    if _all_games_final(data.get("events", [])):
+        week += 1
     return year, week
 
 

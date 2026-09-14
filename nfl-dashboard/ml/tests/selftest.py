@@ -107,7 +107,20 @@ def main():
     checks += 1
     print(f"[ok] touchdowns: {len(train_td)} training rows, {len(upcoming_td)} projected")
 
-    print(f"\nselftest passed ({checks + 1} sections)")
+    from espn_client import _all_games_final
+
+    assert _all_games_final([]) is False, "no events shouldn't count as 'final'"
+    assert _all_games_final([{"status": {"type": {"state": "post"}}}]) is True
+    assert (
+        _all_games_final(
+            [{"status": {"type": {"state": "post"}}}, {"status": {"type": {"state": "in"}}}]
+        )
+        is False
+    ), "one game still in progress means the week isn't done"
+    assert _all_games_final([{"status": {"type": {"state": "pre"}}}]) is False
+    print("[ok] week rollover: _all_games_final")
+
+    print(f"\nselftest passed ({checks + 2} sections)")
 
 
 if __name__ == "__main__":

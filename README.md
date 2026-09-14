@@ -4,8 +4,8 @@ A collection of small, independent projects, each self-contained in its own top-
 with its own client/server, README, and Dockerfile.
 
 - **[PlanSync](#plansync)** (`client/`, `server/`) — an activity-based matching dating app.
-- **[NFL Sunday Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for NFL
-  Sunday scores, stat leaders, and touchdown scorers.
+- **[NFL Week Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for a full
+  NFL week's scores, stat leaders, and touchdown scorers.
 
 ---
 

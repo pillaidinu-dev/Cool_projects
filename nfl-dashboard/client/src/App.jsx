@@ -3,8 +3,21 @@ import { fetchGames, fetchLeaders } from './api.js';
 import ScoreboardCard from './components/ScoreboardCard.jsx';
 import LeadersTable from './components/LeadersTable.jsx';
 import TouchdownFeed from './components/TouchdownFeed.jsx';
+import TouchdownScorers from './components/TouchdownScorers.jsx';
+
+const TABS = [
+  { key: 'scoreboard', label: 'Scoreboard & Leaders' },
+  { key: 'touchdowns', label: 'Touchdowns' },
+];
 
 const REFRESH_MS = 20_000;
+
+function formatDayHeading(ymd) {
+  // ymd is 'YYYYMMDD' as returned by the API, dated in UTC to match how
+  // ESPN buckets games by day.
+  const date = new Date(`${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}T12:00:00Z`);
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
 
 const PASSING_COLUMNS = [
   { key: 'completionsAttempts', label: 'C/ATT' },
@@ -28,16 +41,17 @@ const RECEIVING_COLUMNS = [
 ];
 
 export default function App() {
-  const [games, setGames] = useState([]);
+  const [days, setDays] = useState([]);
   const [leaders, setLeaders] = useState({ passing: [], rushing: [], receiving: [], touchdowns: [] });
   const [lastUpdated, setLastUpdated] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('scoreboard');
 
   const refresh = useCallback(async () => {
     try {
       const [gamesData, leadersData] = await Promise.all([fetchGames(), fetchLeaders()]);
-      setGames(gamesData.games || []);
+      setDays(gamesData.days || []);
       setLeaders(leadersData);
       setLastUpdated(new Date());
       setError(null);
@@ -61,8 +75,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="max-w-6xl mx-auto px-4 pt-8 pb-4 flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold">NFL Sunday Live</h1>
-          <p className="text-slate-400 text-sm">Scores, stat leaders, and touchdown feed</p>
+          <h1 className="text-2xl font-bold">NFL Week Live</h1>
+          <p className="text-slate-400 text-sm">Scores, stat leaders, and touchdown feed — Thursday through Monday</p>
         </div>
         <div className="text-xs text-slate-500 text-right">
           {loading && <span>Loading…</span>}
@@ -71,32 +85,61 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 pb-12 flex flex-col gap-8">
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">
-            Scoreboard
-          </h2>
-          {games.length === 0 ? (
-            <p className="text-slate-500 text-sm">No games found for this date.</p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {games.map((game) => (
-                <ScoreboardCard key={game.id} game={game} />
-              ))}
-            </div>
-          )}
-        </section>
+      <nav className="max-w-6xl mx-auto px-4 flex gap-1 border-b border-slate-800">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              tab === t.key
+                ? 'border-emerald-400 text-white'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
 
-        <section className="grid gap-6 lg:grid-cols-2">
-          <LeadersTable title="Passing Leaders (QB)" columns={PASSING_COLUMNS} rows={leaders.passing} />
-          <LeadersTable title="Rushing Leaders (RB)" columns={RUSHING_COLUMNS} rows={leaders.rushing} />
-          <LeadersTable title="Receiving Leaders (WR)" columns={RECEIVING_COLUMNS} rows={receivers} />
-          <LeadersTable title="Receiving Leaders (TE)" columns={RECEIVING_COLUMNS} rows={tightEnds} />
-        </section>
+      <main className="max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
+        {tab === 'scoreboard' && (
+          <>
+            <section className="flex flex-col gap-6">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400 -mb-3">
+                Scoreboard
+              </h2>
+              {days.length === 0 ? (
+                <p className="text-slate-500 text-sm">No games found this week.</p>
+              ) : (
+                days.map((day) => (
+                  <div key={day.date}>
+                    <h3 className="text-xs font-medium text-slate-500 mb-2">{formatDayHeading(day.date)}</h3>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {day.games.map((game) => (
+                        <ScoreboardCard key={game.id} game={game} />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </section>
 
-        <section>
-          <TouchdownFeed touchdowns={leaders.touchdowns} />
-        </section>
+            <section className="grid gap-6 lg:grid-cols-2">
+              <LeadersTable title="Passing Leaders (QB)" columns={PASSING_COLUMNS} rows={leaders.passing} />
+              <LeadersTable title="Rushing Leaders (RB)" columns={RUSHING_COLUMNS} rows={leaders.rushing} />
+              <LeadersTable title="Receiving Leaders (WR)" columns={RECEIVING_COLUMNS} rows={receivers} />
+              <LeadersTable title="Receiving Leaders (TE)" columns={RECEIVING_COLUMNS} rows={tightEnds} />
+            </section>
+          </>
+        )}
+
+        {tab === 'touchdowns' && (
+          <section className="grid gap-6 lg:grid-cols-2 items-start">
+            <TouchdownScorers touchdowns={leaders.touchdowns} />
+            <TouchdownFeed touchdowns={leaders.touchdowns} />
+          </section>
+        )}
       </main>
     </div>
   );

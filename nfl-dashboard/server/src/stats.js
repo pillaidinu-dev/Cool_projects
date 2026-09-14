@@ -20,6 +20,20 @@ function isTouchdownPlay(play) {
   return abbr === 'TD' || /touchdown/i.test(text);
 }
 
+// The player who scored, when ESPN's play data lets us name them.
+function extractScorer(play) {
+  const participants = play?.participants || [];
+  const scorer = participants.find((p) => p.type === 'scorer') || participants[0];
+  const name = scorer?.athlete?.displayName || scorer?.athlete?.shortName;
+  if (name) return name;
+
+  // Fall back to parsing the play text, e.g. "A.J. Brown 12 Yd pass from Jalen
+  // Hurts" or "Saquon Barkley 4 Yd Run" — the scorer's name is the leading
+  // phrase before the yardage figure.
+  const match = /^([A-Za-z.'\-\s]+?)\s+\d+\s+Yd/.exec(play?.text || '');
+  return match ? match[1].trim() : undefined;
+}
+
 // `games` is [{ id, name }]. `fetchSummary` is injectable for testing.
 export async function buildLeaders(games, fetchSummary) {
   const passing = [];
@@ -90,6 +104,7 @@ export async function buildLeaders(games, fetchSummary) {
           period: play.period?.number,
           clock: play.clock?.displayValue,
           description: play.text,
+          scorer: extractScorer(play),
         });
       }
     }),

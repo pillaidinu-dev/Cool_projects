@@ -4,6 +4,16 @@ category on one row per player instead of splitting into separate leader
 lists, since the model needs a single training example per player-game.
 """
 
+# ESPN's boxscore athlete stub carries no position field at all (confirmed
+# against real data: id/uid/guid/firstName/lastName/displayName/links/
+# headshot/jersey, nothing else) -- so the stat category itself is the only
+# position signal available. Passing wins ties (set unconditionally): a
+# mobile QB's rushing line shouldn't unset the position his passing line
+# already established, but a truly rare non-QB trick-play pass shouldn't
+# relabel a real RB/WR either -- passing is the more decisive signal either
+# way it's ordered.
+_CATEGORY_POSITION = {"passing": "QB", "rushing": "RB", "receiving": "WR"}
+
 
 def _stat(labels, stats, candidates):
     for label in candidates:
@@ -49,6 +59,7 @@ def parse_boxscore(summary, week, year, event_id):
                 name = athlete.get("displayName")
                 if not name:
                     continue
+
                 key = (team_abbr, name)
                 row = rows.setdefault(
                     key,
@@ -74,8 +85,8 @@ def parse_boxscore(summary, week, year, event_id):
                     },
                 )
                 stats = entry.get("stats") or []
-                position = (athlete.get("position") or {}).get("abbreviation")
-                if position:
+                position = _CATEGORY_POSITION.get(cat_name)
+                if position and (row["position"] is None or cat_name == "passing"):
                     row["position"] = position
 
                 if cat_name == "passing":

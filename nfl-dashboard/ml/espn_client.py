@@ -32,13 +32,21 @@ def _all_games_final(events):
 
 def get_current_week():
     """(year, week_number) to project — the week ESPN considers 'current',
-    advanced by one if every game in that week has already finished."""
+    advanced by one if every game in that week has already finished.
+
+    The bare scoreboard call's own `events` list is NOT the whole week's
+    games — it defaults to *today's* games, which is empty on any non-game
+    day. Checking that against `_all_games_final` silently never advances
+    the week except by coincidence. Fetch the full named week explicitly
+    (the same call `get_week_events` makes) and check that instead.
+    """
     data = _get("scoreboard")
     year = data.get("season", {}).get("year")
     week = data.get("week", {}).get("number")
     if not year or not week:
         raise RuntimeError("Could not determine the current NFL week from ESPN's scoreboard response")
-    if _all_games_final(data.get("events", [])):
+    week_data = _get("scoreboard", seasontype=2, week=week, year=year)
+    if _all_games_final(week_data.get("events", [])):
         week += 1
     return year, week
 

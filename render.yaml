@@ -2,6 +2,7 @@ services:
   - type: web
     name: plansync
     env: docker
+    branch: main
     dockerfilePath: ./Dockerfile
     dockerContext: .
     plan: free
@@ -24,6 +25,7 @@ services:
   - type: web
     name: nfl-dashboard
     env: docker
+    branch: main
     dockerfilePath: ./nfl-dashboard/Dockerfile
     dockerContext: .
     plan: free

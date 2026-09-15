@@ -3,6 +3,9 @@ the parsing in nfl-dashboard/server/src/stats.js, but keeps every offensive
 category on one row per player instead of splitting into separate leader
 lists, since the model needs a single training example per player-game.
 """
+import json
+
+_dumped_sample = False
 
 
 def _stat(labels, stats, candidates):
@@ -49,6 +52,13 @@ def parse_boxscore(summary, week, year, event_id):
                 name = athlete.get("displayName")
                 if not name:
                     continue
+
+                global _dumped_sample
+                if not _dumped_sample:
+                    _dumped_sample = True
+                    print(f"[diag] sample entry keys={list(entry.keys())} athlete keys={list(athlete.keys())}")
+                    print(f"[diag] sample athlete={json.dumps(athlete)}")
+                    print(f"[diag] sample entry (no athlete)={json.dumps({k: v for k, v in entry.items() if k != 'athlete'})}")
                 key = (team_abbr, name)
                 row = rows.setdefault(
                     key,

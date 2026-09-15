@@ -120,7 +120,47 @@ def main():
     assert _all_games_final([{"status": {"type": {"state": "pre"}}}]) is False
     print("[ok] week rollover: _all_games_final")
 
-    print(f"\nselftest passed ({checks + 2} sections)")
+    _test_get_current_week_advances_on_a_quiet_weekday()
+    print("[ok] week rollover: get_current_week")
+
+    print(f"\nselftest passed ({checks + 3} sections)")
+
+
+def _test_get_current_week_advances_on_a_quiet_weekday():
+    """Regression test for a real bug: the bare `scoreboard` call's own
+    `events` list defaults to *today's* games, not the whole current week's
+    -- empty on any non-game day. get_current_week() must check the full
+    named week (a second, explicit call), not that today-only list, or it
+    silently never advances past a week that finished days ago.
+    """
+    import espn_client
+
+    responses = {
+        ("scoreboard", ()): {"season": {"year": 2026}, "week": {"number": 1}, "events": []},
+        ("scoreboard", (("seasontype", 2), ("week", 1), ("year", 2026))): {
+            "events": [
+                {"status": {"type": {"state": "post"}}},
+                {"status": {"type": {"state": "post"}}},
+            ]
+        },
+    }
+
+    def fake_get(path, **params):
+        key = (path, tuple(sorted(params.items())))
+        if key not in responses:
+            raise AssertionError(f"unexpected ESPN call: {path} {params}")
+        return responses[key]
+
+    original_get = espn_client._get
+    espn_client._get = fake_get
+    try:
+        year, week = espn_client.get_current_week()
+    finally:
+        espn_client._get = original_get
+
+    assert (year, week) == (2026, 2), (
+        f"expected get_current_week() to advance past a fully-final week 1 to week 2, got {(year, week)}"
+    )
 
 
 if __name__ == "__main__":

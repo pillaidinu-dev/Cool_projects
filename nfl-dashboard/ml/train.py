@@ -130,6 +130,13 @@ def main():
     archive.write_text(json.dumps(result, indent=2))
     print(f"Wrote {args.out}", file=sys.stderr)
 
+    # A one-line summary on stdout (not stderr) so it shows up in the
+    # server's "Weekly projections regenerated: <stdout>" log line -- the
+    # only cheap way to confirm from outside the container what a
+    # successful run actually produced, without a live view of the JSON.
+    counts = {k: len(result.get(k, [])) for k in ("passing", "rushing", "receiving", "touchdowns")}
+    print(f"season={year} week={week} counts={counts} note={result.get('note')!r}")
+
 
 if __name__ == "__main__":
     main()

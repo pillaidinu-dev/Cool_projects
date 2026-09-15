@@ -85,19 +85,10 @@ def build_projections(year, week):
     gamelogs["td_total"] = gamelogs["rush_td"] + gamelogs["rec_td"]
     matchups = dataset.fetch_upcoming_matchups(year, week)
 
-    print(
-        f"[diag] gamelogs rows={len(gamelogs)} "
-        f"positions={gamelogs['position'].value_counts(dropna=False).to_dict()} "
-        f"teams={sorted(gamelogs['team'].dropna().unique().tolist())} "
-        f"opponent_nulls={int(gamelogs['opponent'].isna().sum())}"
-    )
-    print(f"[diag] matchups={matchups}")
-
     output = {"season": year, "week": week, "metrics": {}}
     for category, cfg in CATEGORIES.items():
         train_df = build_training_frame(gamelogs, cfg["stat_col"], cfg["positions"])
         upcoming_df = build_upcoming_frame(gamelogs, cfg["stat_col"], cfg["positions"], matchups)
-        print(f"[diag] {category}: train_rows={len(train_df)} upcoming_rows={len(upcoming_df)}")
         predicted, mae = project_yardage(train_df, upcoming_df)
         output["metrics"][f"{category}MAE"] = round2(mae) if mae is not None else None
         output[category] = yardage_rows(predicted.sort_values("projection", ascending=False).head(cfg["limit"]))

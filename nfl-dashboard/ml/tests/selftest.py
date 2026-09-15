@@ -123,7 +123,10 @@ def main():
     _test_get_current_week_advances_on_a_quiet_weekday()
     print("[ok] week rollover: get_current_week")
 
-    print(f"\nselftest passed ({checks + 3} sections)")
+    _test_parse_boxscore_position_fallback()
+    print("[ok] boxscore: position fallback from stat category")
+
+    print(f"\nselftest passed ({checks + 4} sections)")
 
 
 def _test_get_current_week_advances_on_a_quiet_weekday():
@@ -161,6 +164,68 @@ def _test_get_current_week_advances_on_a_quiet_weekday():
     assert (year, week) == (2026, 2), (
         f"expected get_current_week() to advance past a fully-final week 1 to week 2, got {(year, week)}"
     )
+
+
+def _test_parse_boxscore_position_fallback():
+    """Regression test for a real bug: ESPN's real boxscore athlete stub
+    carries NO position field at all (confirmed against live data: id, uid,
+    guid, firstName, lastName, displayName, links, headshot, jersey -- and
+    nothing else). The code assumed `athlete.position.abbreviation` existed,
+    which only ever held on synthetic test fixtures -- every real gamelog
+    row came back position=None until this was caught in production. The
+    fix falls back to the stat category itself (passing -> QB, rushing ->
+    RB, receiving -> WR), with passing always winning so a mobile QB's
+    rushing line can't unset the QB tag his passing line established.
+    """
+    from boxscore import parse_boxscore
+
+    def athlete(id_, name):
+        return {"id": id_, "uid": f"s:20~l:28~a:{id_}", "displayName": name, "jersey": "1"}
+
+    summary = {
+        "header": {
+            "competitions": [
+                {
+                    "competitors": [
+                        {"team": {"abbreviation": "BUF"}, "homeAway": "home"},
+                        {"team": {"abbreviation": "DEN"}, "homeAway": "away"},
+                    ]
+                }
+            ]
+        },
+        "boxscore": {
+            "players": [
+                {
+                    "team": {"abbreviation": "DEN"},
+                    "statistics": [
+                        {
+                            "name": "rushing",
+                            "labels": ["CAR", "YDS", "TD"],
+                            "athletes": [
+                                {"athlete": athlete("1", "Mobile QB"), "stats": ["4", "16", "1"]},
+                                {"athlete": athlete("2", "Real RB"), "stats": ["18", "90", "1"]},
+                            ],
+                        },
+                        {
+                            "name": "passing",
+                            "labels": ["C/ATT", "YDS", "TD", "INT"],
+                            "athletes": [
+                                {"athlete": athlete("1", "Mobile QB"), "stats": ["17/28", "131", "1", "1"]},
+                            ],
+                        },
+                    ],
+                },
+            ]
+        },
+    }
+
+    rows = {r["player"]: r for r in parse_boxscore(summary, week=2, year=2026, event_id="1")}
+    assert rows["Mobile QB"]["position"] == "QB", (
+        f"passing must win over rushing regardless of category order, got {rows['Mobile QB']['position']}"
+    )
+    assert rows["Real RB"]["position"] == "RB"
+    assert rows["Mobile QB"]["opponent"] == "BUF"
+    assert rows["Mobile QB"]["is_home"] == 0
 
 
 if __name__ == "__main__":

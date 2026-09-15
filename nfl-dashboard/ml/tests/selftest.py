@@ -15,7 +15,7 @@ import pandas as pd
 
 from features import FEATURE_COLS, build_training_frame, build_upcoming_frame
 from model import project_touchdowns, project_yardage
-from train import touchdown_rows, yardage_rows
+from train import top_per_team, touchdown_rows, yardage_rows
 
 
 def synthetic_gamelogs(weeks=5, seed=7):
@@ -126,7 +126,10 @@ def main():
     _test_parse_boxscore_position_fallback()
     print("[ok] boxscore: position fallback from stat category")
 
-    print(f"\nselftest passed ({checks + 4} sections)")
+    _test_top_per_team_covers_every_team()
+    print("[ok] projections: top_per_team guarantees every team a slot")
+
+    print(f"\nselftest passed ({checks + 5} sections)")
 
 
 def _test_get_current_week_advances_on_a_quiet_weekday():
@@ -226,6 +229,36 @@ def _test_parse_boxscore_position_fallback():
     assert rows["Real RB"]["position"] == "RB"
     assert rows["Mobile QB"]["opponent"] == "BUF"
     assert rows["Mobile QB"]["is_home"] == 0
+
+
+def _test_top_per_team_covers_every_team():
+    """Regression test for a real bug: sorting all players league-wide and
+    taking a flat head(20) let a handful of standout teams crowd out every
+    other game -- a week with ~16 games would show players from only 3-4 of
+    them. Three teams here have every top-scoring player; without the
+    per-team floor, the seven quiet teams would be shut out entirely.
+    """
+    import pandas as pd
+
+    rows = []
+    for team, scores in [
+        ("AAA", [30, 29, 28]), ("BBB", [27, 26, 25]), ("CCC", [24, 23, 22]),
+        ("DDD", [5]), ("EEE", [4]), ("FFF", [3]), ("GGG", [2]),
+        ("HHH", [1.5]), ("III", [1]), ("JJJ", [0.5]),
+    ]:
+        for i, score in enumerate(scores):
+            rows.append({"team": team, "player": f"{team} P{i}", "projection": score})
+    df = pd.DataFrame(rows)
+
+    result = top_per_team(df, "projection", per_team=1, limit=10)
+    assert set(result["team"]) == {r["team"] for r in rows}, (
+        f"every team should get at least one slot, got {sorted(result['team'])}"
+    )
+
+    starved = df.sort_values("projection", ascending=False).head(10)
+    assert set(starved["team"]) != set(df["team"]), (
+        "test fixture didn't actually reproduce the bug -- a flat head(10) should have starved some teams"
+    )
 
 
 if __name__ == "__main__":

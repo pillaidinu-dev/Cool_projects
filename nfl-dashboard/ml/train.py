@@ -110,7 +110,7 @@ def build_projections(year, week):
         output["metrics"][f"{category}MAE"] = round2(mae) if mae is not None else None
         output[category] = yardage_rows(top_per_team(predicted, "projection", cfg["per_team"], cfg["limit"]))
 
-    train_td = build_training_frame(gamelogs, "td_total", TOUCHDOWN_POSITIONS)
+    train_td = build_training_frame(gamelogs, "td_total", TOUCHDOWN_POSITIONS, drop_zero_debuts=False)
     upcoming_td = build_upcoming_frame(gamelogs, "td_total", TOUCHDOWN_POSITIONS, matchups)
     predicted_td = project_touchdowns(train_td, upcoming_td)
     output["touchdowns"] = touchdown_rows(top_per_team(predicted_td, "td_probability", TOUCHDOWN_PER_TEAM, TOUCHDOWN_LIMIT))

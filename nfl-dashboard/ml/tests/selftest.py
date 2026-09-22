@@ -98,7 +98,7 @@ def main():
         checks += 1
         print(f"[ok] {category}: {len(train_df)} training rows, {len(upcoming_df)} projected, MAE={mae}")
 
-    train_td = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"])
+    train_td = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"], drop_zero_debuts=False)
     upcoming_td = build_upcoming_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"], matchups)
     predicted_td = project_touchdowns(train_td, upcoming_td)
     assert ((predicted_td["td_probability"] >= 0) & (predicted_td["td_probability"] <= 1)).all(), "prob out of [0,1]"
@@ -132,7 +132,10 @@ def main():
     _test_evaluate_backtest()
     print("[ok] evaluate: backtest joins projections to a later week's actuals")
 
-    print(f"\nselftest passed ({checks + 6} sections)")
+    _test_touchdown_training_keeps_zero_scoring_debuts()
+    print("[ok] features: drop_zero_debuts=False keeps non-scorers in a cold-start TD frame")
+
+    print(f"\nselftest passed ({checks + 7} sections)")
 
 
 def _test_get_current_week_advances_on_a_quiet_weekday():
@@ -289,6 +292,29 @@ def _test_evaluate_backtest():
     assert td_stats["n"] > 0, "touchdowns: no players joined to actuals"
     assert 0 <= td_stats["brier"] <= 1
     assert 0 <= td_stats["actualScoreRate"] <= 100
+
+
+def _test_touchdown_training_keeps_zero_scoring_debuts():
+    """Regression test for a real bug found via evaluate.py: build_training_frame's
+    default filter drops any row with games_played == 0 and target == 0. On the
+    season's very first training frame (week 1 -> week 2 projections), EVERY row
+    is a debut, so with the default filter only week-1 touchdown scorers survive
+    -- the touchdown model trains exclusively on scorers and wildly overpredicts
+    (confirmed live: ~72% average predicted probability against an ~18% actual
+    score rate). drop_zero_debuts=False must keep the non-scorers too.
+    """
+    gamelogs, _ = synthetic_gamelogs(weeks=1)
+    gamelogs["td_total"] = gamelogs["rush_td"] + gamelogs["rec_td"]
+
+    scorers_only = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"])
+    assert (scorers_only["target"] > 0).all(), (
+        "with the default filter, a week-1-only training frame should contain only "
+        "scorers -- this is the bug being guarded against"
+    )
+
+    full = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"], drop_zero_debuts=False)
+    assert (full["target"] == 0).any(), "non-scoring debut rows must survive with drop_zero_debuts=False"
+    assert len(full) > len(scorers_only), "the fixed path should keep strictly more rows than the buggy one"
 
 
 if __name__ == "__main__":

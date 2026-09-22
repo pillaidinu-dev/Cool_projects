@@ -67,7 +67,7 @@ def evaluate(history, actual, matchups):
             "bandCoverage": round(float(in_band.mean()) * 100, 1),  # how often actual fell in [low, high]
         }
 
-    train_td = build_training_frame(history, "td_total", TOUCHDOWN_POSITIONS)
+    train_td = build_training_frame(history, "td_total", TOUCHDOWN_POSITIONS, drop_zero_debuts=False)
     upcoming_td = build_upcoming_frame(history, "td_total", TOUCHDOWN_POSITIONS, matchups)
     predicted_td = project_touchdowns(train_td, upcoming_td)
 

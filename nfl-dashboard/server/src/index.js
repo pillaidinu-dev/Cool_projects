@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import gamesRoutes from './routes/games.js';
 import leadersRoutes from './routes/leaders.js';
 import predictionsRoutes from './routes/predictions.js';
+import adminRoutes from './routes/admin.js';
 import { startWeeklyRetraining } from './predictions.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -16,6 +17,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/games', gamesRoutes);
 app.use('/api/leaders', leadersRoutes);
 app.use('/api/predictions', predictionsRoutes);
+app.use('/api/admin', adminRoutes);
 
 startWeeklyRetraining();
 

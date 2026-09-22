@@ -8,10 +8,13 @@ converges toward a heavier model's as more weeks of data accumulate.
 """
 import numpy as np
 from sklearn.linear_model import PoissonRegressor, Ridge
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, mean_poisson_deviance
 from sklearn.model_selection import KFold
 
 from features import FEATURE_COLS
+
+TD_ALPHA_GRID = [0.1, 0.3, 1.0, 3.0, 10.0, 30.0]
+TD_ALPHA_DEFAULT = 1.0
 
 
 def _matrix(df, cols):
@@ -58,13 +61,47 @@ def project_yardage(train_df, upcoming_df):
     return out, mae
 
 
+def _best_td_alpha(train_df, n_splits=5):
+    """Cross-validated pick of the Poisson regressor's alpha (L2 penalty) by
+    mean Poisson deviance -- the correct scoring rule for a count model,
+    where MAE would reward under-confident predictions that hug the mean.
+    Falls back to TD_ALPHA_DEFAULT when there isn't enough history to split
+    reliably, same threshold as backtest_mae uses for the yardage models.
+    """
+    if len(train_df) < 12:
+        return TD_ALPHA_DEFAULT
+    X, y = _matrix(train_df, FEATURE_COLS), train_df["target"].to_numpy(dtype=float)
+    splits = min(n_splits, len(train_df) // 4)
+    if splits < 2:
+        return TD_ALPHA_DEFAULT
+
+    kf = KFold(n_splits=splits, shuffle=True, random_state=7)
+    fold_idx = list(kf.split(X))
+    best_alpha, best_score = TD_ALPHA_DEFAULT, None
+    for alpha in TD_ALPHA_GRID:
+        scores = []
+        for train_idx, test_idx in fold_idx:
+            model = PoissonRegressor(alpha=alpha, max_iter=500)
+            model.fit(X[train_idx], y[train_idx])
+            pred = np.clip(model.predict(X[test_idx]), 1e-6, None)
+            scores.append(mean_poisson_deviance(y[test_idx], pred))
+        mean_score = float(np.mean(scores))
+        if best_score is None or mean_score < best_score:
+            best_alpha, best_score = alpha, mean_score
+    return best_alpha
+
+
 def project_touchdowns(train_df, upcoming_df):
     """Poisson regression on TD counts per game -> expected TDs -> P(>=1 TD),
-    the same math sportsbooks use to price an "anytime touchdown scorer" line."""
+    the same math sportsbooks use to price an "anytime touchdown scorer" line.
+    The L2 penalty (alpha) is cross-validated per run rather than fixed, since
+    a flat guess either underfits once enough weeks of history accumulate or
+    overfits the sparse early-season data -- see _best_td_alpha."""
     if train_df.empty or upcoming_df.empty:
         return upcoming_df.assign(expected_td=0.0, td_probability=0.0)
 
-    model = PoissonRegressor(alpha=1.0, max_iter=500)
+    alpha = _best_td_alpha(train_df)
+    model = PoissonRegressor(alpha=alpha, max_iter=500)
     model.fit(_matrix(train_df, FEATURE_COLS), train_df["target"].to_numpy(dtype=float))
 
     lam = np.clip(model.predict(_matrix(upcoming_df, FEATURE_COLS)), 0, None)

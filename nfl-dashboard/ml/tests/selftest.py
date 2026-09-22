@@ -129,7 +129,10 @@ def main():
     _test_top_per_team_covers_every_team()
     print("[ok] projections: top_per_team guarantees every team a slot")
 
-    print(f"\nselftest passed ({checks + 5} sections)")
+    _test_evaluate_backtest()
+    print("[ok] evaluate: backtest joins projections to a later week's actuals")
+
+    print(f"\nselftest passed ({checks + 6} sections)")
 
 
 def _test_get_current_week_advances_on_a_quiet_weekday():
@@ -259,6 +262,33 @@ def _test_top_per_team_covers_every_team():
     assert set(starved["team"]) != set(df["team"]), (
         "test fixture didn't actually reproduce the bug -- a flat head(10) should have starved some teams"
     )
+
+
+def _test_evaluate_backtest():
+    """evaluate.py rebuilds a past week's projections from history alone and
+    joins them to that week's real results -- exercise the join end-to-end on
+    synthetic data so a key-spelling or accessor bug fails loudly here rather
+    than only ever showing up against live ESPN games."""
+    from evaluate import evaluate
+
+    gamelogs, pairings = synthetic_gamelogs(weeks=6)
+    history = gamelogs[gamelogs["week"] < 6]
+    actual = gamelogs[gamelogs["week"] == 6]
+    matchups = [
+        {"event_id": f"w6-{h}-{a}", "name": f"{a} @ {h}", "home": h, "away": a} for h, a in pairings
+    ]
+
+    report = evaluate(history, actual, matchups)
+    for category in ("passing", "rushing", "receiving"):
+        stats = report["categories"][category]
+        assert stats["n"] > 0, f"{category}: no players joined to actuals"
+        assert stats["mae"] >= 0
+        assert 0 <= stats["bandCoverage"] <= 100
+
+    td_stats = report["categories"]["touchdowns"]
+    assert td_stats["n"] > 0, "touchdowns: no players joined to actuals"
+    assert 0 <= td_stats["brier"] <= 1
+    assert 0 <= td_stats["actualScoreRate"] <= 100
 
 
 if __name__ == "__main__":

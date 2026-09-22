@@ -8,8 +8,15 @@ const SUMMARY_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/
 // per-game summary fan-out, don't hammer ESPN on every request.
 const CACHE_MS = 15_000;
 
+// Longer TTL than the 15s game-day cache: the current week and a given
+// week's event list rarely change mid-request-burst, and re-deriving the
+// current week means two extra ESPN calls every time.
+const SEASON_CACHE_MS = 5 * 60 * 1000;
+
 let scoreboardCache = { key: null, at: 0, data: null };
 const summaryCache = new Map(); // eventId -> { at, data }
+let currentWeekCache = { at: 0, data: null };
+const seasonWeekCache = new Map(); // "year-week" -> { at, data }
 
 async function fetchJson(url) {
   const res = await fetch(url);
@@ -79,6 +86,52 @@ export async function getWeekScoreboard(dateOverride) {
   const data = { weekStart: toYmd(dates[0]), weekEnd: toYmd(dates[dates.length - 1]), days, errors };
   scoreboardCache = { key, at: Date.now(), data };
   return data;
+}
+
+// (year, week) ESPN considers "current" for the regular season, advanced by
+// one once every game in that week has finished -- mirrors
+// ml/espn_client.py's get_current_week() so the season-cumulative leaders
+// below stop at the same week boundary the ML projections do.
+export async function getCurrentWeek() {
+  if (currentWeekCache.data && Date.now() - currentWeekCache.at < SEASON_CACHE_MS) {
+    return currentWeekCache.data;
+  }
+  const data = await fetchJson(SCOREBOARD_URL);
+  const year = data?.season?.year;
+  const week = data?.week?.number;
+  if (!year || !week) {
+    throw new Error("Could not determine the current NFL week from ESPN's scoreboard response");
+  }
+  const weekData = await fetchJson(`${SCOREBOARD_URL}?seasontype=2&week=${week}&year=${year}`);
+  const events = weekData.events || [];
+  const allFinal = events.length > 0 && events.every((e) => e.status?.type?.state === 'post');
+  const result = { year, week: allFinal ? week + 1 : week };
+  currentWeekCache = { at: Date.now(), data: result };
+  return result;
+}
+
+// Every game in a single named regular-season week (as opposed to
+// getWeekScoreboard's calendar-date window) -- the season-cumulative
+// leaders below walk these week-by-week instead of by date.
+export async function getSeasonWeekEvents(year, week) {
+  const cacheKey = `${year}-${week}`;
+  const cached = seasonWeekCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < SEASON_CACHE_MS) {
+    return cached.data;
+  }
+  const data = await fetchJson(`${SCOREBOARD_URL}?seasontype=2&week=${week}&year=${year}`);
+  const events = (data.events || []).map((e) => ({ id: e.id, name: e.shortName || e.name || '' }));
+  seasonWeekCache.set(cacheKey, { at: Date.now(), data: events });
+  return events;
+}
+
+// Every game played so far this season (weeks 1..currentWeek), flattened.
+export async function getSeasonEvents() {
+  const { year, week: currentWeek } = await getCurrentWeek();
+  const weeks = await Promise.all(
+    Array.from({ length: currentWeek }, (_, i) => getSeasonWeekEvents(year, i + 1)),
+  );
+  return { year, currentWeek, events: weeks.flat() };
 }
 
 // Box score + scoring plays for a single game.

@@ -15,6 +15,10 @@ export function fetchLeaders() {
   return getJson('/api/leaders');
 }
 
+export function fetchSeasonLeaders() {
+  return getJson('/api/leaders/season');
+}
+
 export function fetchPredictions() {
   return getJson('/api/predictions');
 }

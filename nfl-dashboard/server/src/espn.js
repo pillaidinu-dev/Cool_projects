@@ -44,11 +44,10 @@ function mostRecentThursday(now = new Date()) {
   return d;
 }
 
-// The 5 calendar dates (Thu..Mon, UTC) that make up the NFL week containing
-// `now`. Covers the standard Thu/Sun/Mon slate plus the Fri/Sat games that
-// show up late in the season (Thanksgiving, Christmas, week 18, etc).
-export function weekDates(now = new Date()) {
-  const thursday = mostRecentThursday(now);
+// The 5 calendar dates (Thu..Mon, UTC) starting at `thursday`. Covers the
+// standard Thu/Sun/Mon slate plus the Fri/Sat games that show up late in
+// the season (Thanksgiving, Christmas, week 18, etc).
+function datesFromThursday(thursday) {
   return Array.from({ length: 5 }, (_, i) => {
     const d = new Date(thursday);
     d.setUTCDate(d.getUTCDate() + i);
@@ -56,19 +55,13 @@ export function weekDates(now = new Date()) {
   });
 }
 
-// Every game across the NFL week containing `dateOverride` (defaults to
-// now), grouped by the calendar day it was fetched under. Each day is
-// fetched independently and cached together as one week, so a single day's
-// ESPN request failing doesn't take down the rest of the week — it's
-// reported in `errors` and just shows as no games that day.
-export async function getWeekScoreboard(dateOverride) {
-  const anchor = dateOverride ? new Date(dateOverride) : new Date();
-  const dates = weekDates(anchor);
-  const key = dates.map(toYmd).join(',');
-  if (scoreboardCache.key === key && Date.now() - scoreboardCache.at < CACHE_MS) {
-    return scoreboardCache.data;
-  }
+// The 5 calendar dates (Thu..Mon, UTC) that make up the NFL week containing
+// `now`.
+export function weekDates(now = new Date()) {
+  return datesFromThursday(mostRecentThursday(now));
+}
 
+async function fetchWeekDays(dates) {
   const errors = [];
   const days = await Promise.all(
     dates.map(async (d) => {
@@ -82,6 +75,46 @@ export async function getWeekScoreboard(dateOverride) {
       }
     }),
   );
+  return { days, errors };
+}
+
+function allGamesFinal(days) {
+  const events = days.flatMap((day) => day.events);
+  return events.length > 0 && events.every((e) => e.status?.type?.state === 'post');
+}
+
+// Every game across the NFL week containing `dateOverride` (defaults to
+// now), grouped by the calendar day it was fetched under. Each day is
+// fetched independently and cached together as one week, so a single day's
+// ESPN request failing doesn't take down the rest of the week — it's
+// reported in `errors` and just shows as no games that day.
+//
+// Once every game in that Thu..Mon window has finished (including Monday
+// night), the dashboard advances straight to the next week's Thu..Mon
+// window rather than sitting on the just-finished slate through Tuesday
+// and Wednesday until the calendar actually reaches the following Thursday.
+export async function getWeekScoreboard(dateOverride) {
+  const anchor = dateOverride ? new Date(dateOverride) : new Date();
+  const anchorThursday = mostRecentThursday(anchor);
+  // Keyed off the anchor week rather than the dates actually returned, so
+  // the cache still hits every call once a week has rolled over -- otherwise
+  // the rolled-forward key would never match itself across calls (this
+  // function computes it fresh each time) and every request would re-fetch.
+  const key = `week:${toYmd(anchorThursday)}`;
+
+  if (scoreboardCache.key === key && Date.now() - scoreboardCache.at < CACHE_MS) {
+    return scoreboardCache.data;
+  }
+
+  let dates = datesFromThursday(anchorThursday);
+  let { days, errors } = await fetchWeekDays(dates);
+
+  if (!dateOverride && allGamesFinal(days)) {
+    const nextThursday = new Date(anchorThursday);
+    nextThursday.setUTCDate(nextThursday.getUTCDate() + 7);
+    dates = datesFromThursday(nextThursday);
+    ({ days, errors } = await fetchWeekDays(dates));
+  }
 
   const data = { weekStart: toYmd(dates[0]), weekEnd: toYmd(dates[dates.length - 1]), days, errors };
   scoreboardCache = { key, at: Date.now(), data };

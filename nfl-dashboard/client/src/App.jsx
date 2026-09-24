@@ -1,5 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchGames, fetchLeaders, fetchSeasonLeaders, fetchPredictions } from './api.js';
+import {
+  fetchGames,
+  fetchLeaders,
+  fetchSeasonLeaders,
+  fetchFantasyLeaders,
+  fetchSeasonFantasyLeaders,
+  fetchPredictions,
+} from './api.js';
 import ScoreboardCard from './components/ScoreboardCard.jsx';
 import LeadersTable from './components/LeadersTable.jsx';
 import TouchdownFeed from './components/TouchdownFeed.jsx';
@@ -57,7 +64,23 @@ const TOUCHDOWN_LEADER_COLUMNS = [
   { key: 'games', label: 'GP' },
 ];
 
+// Full-PPR: 1pt/25 pass yds, 4pt pass TD, -2 INT, 1pt/10 rush-rec yds,
+// 6pt rush/rec TD, 1pt/reception -- see stats.js's FANTASY_SCORING.
+const FANTASY_COLUMNS = [
+  { key: 'fantasyPoints', label: 'Pts' },
+  { key: 'passYards', label: 'Pass Yds' },
+  { key: 'passTouchdowns', label: 'Pass TD' },
+  { key: 'interceptions', label: 'Int' },
+  { key: 'rushYards', label: 'Rush Yds' },
+  { key: 'rushTouchdowns', label: 'Rush TD' },
+  { key: 'receptions', label: 'Rec' },
+  { key: 'recYards', label: 'Rec Yds' },
+  { key: 'recTouchdowns', label: 'Rec TD' },
+];
+const SEASON_FANTASY_COLUMNS = [...FANTASY_COLUMNS, { key: 'games', label: 'GP' }];
+
 const EMPTY_LEADERS = { passing: [], rushing: [], receiving: [], touchdowns: [] };
+const EMPTY_FANTASY = { fantasy: [] };
 
 export default function App() {
   const [days, setDays] = useState([]);
@@ -72,16 +95,20 @@ export default function App() {
   const [seasonMeta, setSeasonMeta] = useState(null);
   const [seasonLoading, setSeasonLoading] = useState(false);
   const [seasonError, setSeasonError] = useState(null);
+  const [fantasy, setFantasy] = useState(EMPTY_FANTASY);
+  const [seasonFantasy, setSeasonFantasy] = useState(EMPTY_FANTASY);
 
   const refresh = useCallback(async () => {
     try {
-      const [gamesData, leadersData, predictionsData] = await Promise.all([
+      const [gamesData, leadersData, fantasyData, predictionsData] = await Promise.all([
         fetchGames(),
         fetchLeaders(),
+        fetchFantasyLeaders(),
         fetchPredictions(),
       ]);
       setDays(gamesData.days || []);
       setLeaders(leadersData);
+      setFantasy(fantasyData);
       setPredictions(predictionsData);
       setLastUpdated(new Date());
       setError(null);
@@ -101,8 +128,9 @@ export default function App() {
   const refreshSeason = useCallback(async () => {
     setSeasonLoading(true);
     try {
-      const data = await fetchSeasonLeaders();
+      const [data, fantasyData] = await Promise.all([fetchSeasonLeaders(), fetchSeasonFantasyLeaders()]);
       setSeasonLeaders(data);
+      setSeasonFantasy(fantasyData);
       setSeasonMeta({ season: data.season, throughWeek: data.throughWeek });
       setSeasonError(null);
     } catch (err) {
@@ -123,6 +151,7 @@ export default function App() {
   }, [tab, leaderRange, refreshSeason]);
 
   const activeLeaders = leaderRange === 'season' ? seasonLeaders : leaders;
+  const activeFantasy = leaderRange === 'season' ? seasonFantasy : fantasy;
   const receivers = activeLeaders.receiving.filter((r) => r.position === 'WR' || !r.position);
   const tightEnds = activeLeaders.receiving.filter((r) => r.position === 'TE');
 
@@ -216,6 +245,12 @@ export default function App() {
               {leaderRange === 'season' && seasonError && (
                 <p className="text-rose-400 text-sm">{seasonError}</p>
               )}
+
+              <LeadersTable
+                title="Fantasy Points Leaders (Full PPR)"
+                columns={leaderRange === 'season' ? SEASON_FANTASY_COLUMNS : FANTASY_COLUMNS}
+                rows={activeFantasy.fantasy}
+              />
 
               <section className="grid gap-6 lg:grid-cols-2">
                 {leaderRange === 'week' ? (

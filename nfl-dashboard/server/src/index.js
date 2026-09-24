@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import gamesRoutes from './routes/games.js';
 import leadersRoutes from './routes/leaders.js';
+import fantasyRoutes from './routes/fantasy.js';
 import predictionsRoutes from './routes/predictions.js';
 import adminRoutes from './routes/admin.js';
 import { startWeeklyRetraining } from './predictions.js';
@@ -16,6 +17,7 @@ app.use(cors());
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/games', gamesRoutes);
 app.use('/api/leaders', leadersRoutes);
+app.use('/api/fantasy', fantasyRoutes);
 app.use('/api/predictions', predictionsRoutes);
 app.use('/api/admin', adminRoutes);
 

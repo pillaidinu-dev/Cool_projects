@@ -218,3 +218,115 @@ export async function buildSeasonLeaders(games, fetchSummary) {
 
   return { passing: passingRows, rushing: rushingRows, receiving: receivingRows, touchdowns: touchdownRows, errors };
 }
+
+// Standard full-PPR scoring -- the default on ESPN/Yahoo/Sleeper, and the
+// one most people mean by "fantasy points" without specifying a format.
+const FANTASY_SCORING = {
+  passYardsPerPoint: 25,
+  passTouchdown: 4,
+  interception: -2,
+  rushYardsPerPoint: 10,
+  rushTouchdown: 6,
+  recYardsPerPoint: 10,
+  recTouchdown: 6,
+  reception: 1,
+};
+
+function round1(value) {
+  return Math.round(value * 10) / 10;
+}
+
+function fantasyPointsFor(r) {
+  return round1(
+    (r.passYards || 0) / FANTASY_SCORING.passYardsPerPoint +
+      (r.passTouchdowns || 0) * FANTASY_SCORING.passTouchdown +
+      (r.interceptions || 0) * FANTASY_SCORING.interception +
+      (r.rushYards || 0) / FANTASY_SCORING.rushYardsPerPoint +
+      (r.rushTouchdowns || 0) * FANTASY_SCORING.rushTouchdown +
+      (r.recYards || 0) / FANTASY_SCORING.recYardsPerPoint +
+      (r.recTouchdowns || 0) * FANTASY_SCORING.recTouchdown +
+      (r.receptions || 0) * FANTASY_SCORING.reception,
+  );
+}
+
+// Merges one category's stat line into a player's running total, keyed by
+// game id rather than a plain counter -- unlike accumulatePlayer above, the
+// same player can be credited from more than one category (passing +
+// rushing, receiving + a wildcat carry) within the same game, so a naive
+// per-call increment would double-count games played.
+function addFantasyStats(players, key, base, deltas, gameId) {
+  const existing = players.get(key);
+  if (!existing) {
+    players.set(key, { ...base, ...deltas, gameIds: new Set([gameId]) });
+    return;
+  }
+  existing.gameIds.add(gameId);
+  for (const [field, value] of Object.entries(deltas)) {
+    existing[field] = (existing[field] ?? 0) + value;
+  }
+}
+
+// Combines every category's box score into one row per player -- a QB's
+// passing line, a receiver's occasional carry, all land on the same row --
+// and scores it with standard fantasy rules, so this is the one leaderboard
+// that ranks every position against every other. `games` is every game to
+// walk: the current week's for a weekly ranking, every week played so far
+// for a season one -- same split as buildLeaders/buildSeasonLeaders.
+export async function buildFantasyLeaders(games, fetchSummary, limit = 25) {
+  const players = new Map();
+  const errors = [];
+
+  await Promise.all(
+    games.map(async (game) => {
+      let summary;
+      try {
+        summary = await fetchSummary(game.id);
+      } catch (err) {
+        errors.push({ game: game.name, error: err.message });
+        return;
+      }
+
+      for (const teamBlock of summary?.boxscore?.players || []) {
+        const teamAbbr = teamBlock.team?.abbreviation;
+        for (const category of teamBlock.statistics || []) {
+          const labels = category.labels || [];
+          for (const entry of category.athletes || []) {
+            const name = entry.athlete?.displayName;
+            if (!name) continue;
+            const position = entry.athlete?.position?.abbreviation;
+            const stats = entry.stats || [];
+            const key = `${teamAbbr}|${name}`;
+            const base = { name, team: teamAbbr, position };
+
+            if (category.name === 'passing') {
+              const passYards = toNumber(statFor(labels, stats, ['YDS']));
+              const passTouchdowns = toNumber(statFor(labels, stats, ['TD']));
+              const interceptions = toNumber(statFor(labels, stats, ['INT']));
+              if (!passYards && !passTouchdowns && !interceptions) continue;
+              addFantasyStats(players, key, base, { passYards, passTouchdowns, interceptions }, game.id);
+            } else if (category.name === 'rushing') {
+              const rushYards = toNumber(statFor(labels, stats, ['YDS']));
+              const rushTouchdowns = toNumber(statFor(labels, stats, ['TD']));
+              if (!rushYards && !rushTouchdowns) continue;
+              addFantasyStats(players, key, base, { rushYards, rushTouchdowns }, game.id);
+            } else if (category.name === 'receiving') {
+              const receptions = toNumber(statFor(labels, stats, ['REC']));
+              const recYards = toNumber(statFor(labels, stats, ['YDS']));
+              const recTouchdowns = toNumber(statFor(labels, stats, ['TD']));
+              if (!receptions && !recYards && !recTouchdowns) continue;
+              addFantasyStats(players, key, base, { receptions, recYards, recTouchdowns }, game.id);
+            }
+          }
+        }
+      }
+    }),
+  );
+
+  const rows = [...players.values()]
+    .map((r) => ({ ...r, games: r.gameIds.size, fantasyPoints: fantasyPointsFor(r) }))
+    .sort((a, b) => b.fantasyPoints - a.fantasyPoints)
+    .slice(0, limit)
+    .map(({ gameIds, ...r }) => r);
+
+  return { fantasy: rows, errors };
+}

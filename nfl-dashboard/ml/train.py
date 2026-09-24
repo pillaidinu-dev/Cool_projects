@@ -24,11 +24,28 @@ from features import build_training_frame, build_upcoming_frame
 from model import project_touchdowns, project_yardage
 
 CATEGORIES = {
-    "passing": {"stat_col": "pass_yards", "positions": ["QB"], "limit": 15},
-    "rushing": {"stat_col": "rush_yards", "positions": ["RB"], "limit": 15},
-    "receiving": {"stat_col": "rec_yards", "positions": ["WR", "TE"], "limit": 20},
+    "passing": {"stat_col": "pass_yards", "positions": ["QB"], "per_team": 1, "limit": 40},
+    "rushing": {"stat_col": "rush_yards", "positions": ["RB"], "per_team": 2, "limit": 40},
+    "receiving": {"stat_col": "rec_yards", "positions": ["WR", "TE"], "per_team": 3, "limit": 60},
 }
 TOUCHDOWN_POSITIONS = ["RB", "WR", "TE", "QB"]
+TOUCHDOWN_PER_TEAM = 2
+TOUCHDOWN_LIMIT = 60
+
+
+def top_per_team(df, sort_col, per_team, limit):
+    """The `per_team` best rows for every team, then trimmed to an overall
+    cap by `sort_col` -- without this, a flat top-N over the whole league
+    lets a handful of standout teams crowd out every other game, so a week
+    with ~16 games ends up showing players from only 3-4 of them. Taking a
+    floor per team first guarantees every team (and so every game) gets a
+    slot before the remaining spots go to the highest projections overall.
+    """
+    if df.empty:
+        return df
+    ranked = df.sort_values(sort_col, ascending=False)
+    floor = ranked.groupby("team", group_keys=False).head(per_team)
+    return floor.sort_values(sort_col, ascending=False).head(limit)
 
 
 def round2(value):
@@ -91,12 +108,12 @@ def build_projections(year, week):
         upcoming_df = build_upcoming_frame(gamelogs, cfg["stat_col"], cfg["positions"], matchups)
         predicted, mae = project_yardage(train_df, upcoming_df)
         output["metrics"][f"{category}MAE"] = round2(mae) if mae is not None else None
-        output[category] = yardage_rows(predicted.sort_values("projection", ascending=False).head(cfg["limit"]))
+        output[category] = yardage_rows(top_per_team(predicted, "projection", cfg["per_team"], cfg["limit"]))
 
-    train_td = build_training_frame(gamelogs, "td_total", TOUCHDOWN_POSITIONS)
+    train_td = build_training_frame(gamelogs, "td_total", TOUCHDOWN_POSITIONS, drop_zero_debuts=False)
     upcoming_td = build_upcoming_frame(gamelogs, "td_total", TOUCHDOWN_POSITIONS, matchups)
     predicted_td = project_touchdowns(train_td, upcoming_td)
-    output["touchdowns"] = touchdown_rows(predicted_td.sort_values("td_probability", ascending=False).head(20))
+    output["touchdowns"] = touchdown_rows(top_per_team(predicted_td, "td_probability", TOUCHDOWN_PER_TEAM, TOUCHDOWN_LIMIT))
 
     return output
 

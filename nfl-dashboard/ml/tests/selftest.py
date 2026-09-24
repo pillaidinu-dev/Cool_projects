@@ -135,7 +135,10 @@ def main():
     _test_touchdown_training_keeps_zero_scoring_debuts()
     print("[ok] features: drop_zero_debuts=False keeps non-scorers in a cold-start TD frame")
 
-    print(f"\nselftest passed ({checks + 7} sections)")
+    _test_band_width_reflects_player_consistency()
+    print("[ok] model: low-high band narrows for a consistent player, not just a global spread")
+
+    print(f"\nselftest passed ({checks + 8} sections)")
 
 
 def _test_get_current_week_advances_on_a_quiet_weekday():
@@ -315,6 +318,51 @@ def _test_touchdown_training_keeps_zero_scoring_debuts():
     full = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"], drop_zero_debuts=False)
     assert (full["target"] == 0).any(), "non-scoring debut rows must survive with drop_zero_debuts=False"
     assert len(full) > len(scorers_only), "the fixed path should keep strictly more rows than the buggy one"
+
+
+def _test_band_width_reflects_player_consistency():
+    """Regression test for a real (if less dramatic) bug: project_yardage used
+    to compute ONE pooled residual spread and apply it to every player at a
+    position, so a rock-steady veteran and a boom-bust role player projected
+    at the identical point value got identically-wide bands -- confirmed
+    against the checked-in sample predictions, where every player within a
+    category had the same band width to within float rounding. The band
+    should widen for a genuinely volatile player and narrow for a consistent
+    one, and fall back to the pooled spread for a player with no track
+    record (a debut) rather than an undefined or zero-width band.
+    """
+    rows = []
+    for week in range(1, 9):
+        # Steady Sam: 95 or 105 yards every game. Boom Bob: 20 or 180 --
+        # same mean (100), wildly different week-to-week variance.
+        rows.append(
+            _row(week, "AAA", "ZZZ", 1, "Steady Sam", "RB", rush_yards=95 + (week % 2) * 10)
+        )
+        rows.append(
+            _row(week, "BBB", "ZZZ", 1, "Boom Bob", "RB", rush_yards=20 if week % 2 else 180)
+        )
+
+    gamelogs = pd.DataFrame(rows)
+    # Separate matchups so both AAA and BBB (and so both players) get a
+    # valid upcoming opponent -- a single ZZZ-vs-AAA matchup would leave
+    # BBB with no mapped opponent and drop Boom Bob as a "bye week".
+    matchups = [
+        {"event_id": "next-aaa", "name": "ZZZ @ AAA", "home": "AAA", "away": "ZZZ"},
+        {"event_id": "next-bbb", "name": "ZZZ @ BBB", "home": "BBB", "away": "ZZZ"},
+    ]
+
+    train_df = build_training_frame(gamelogs, "rush_yards", ["RB"])
+    upcoming_df = build_upcoming_frame(gamelogs, "rush_yards", ["RB"], matchups)
+
+    predicted, _ = project_yardage(train_df, upcoming_df)
+    by_player = predicted.set_index("player")
+    sam_width = by_player.loc["Steady Sam", "high"] - by_player.loc["Steady Sam", "low"]
+    bob_width = by_player.loc["Boom Bob", "high"] - by_player.loc["Boom Bob", "low"]
+
+    assert sam_width < bob_width, (
+        f"a consistent player's band ({sam_width:.1f}) should be narrower than an equally-projected "
+        f"boom-bust player's ({bob_width:.1f}) -- this is the bug being guarded against"
+    )
 
 
 if __name__ == "__main__":

@@ -4,22 +4,27 @@ function withAlpha(hex, alpha) {
   return `${hex}${Math.round(clamped * 255).toString(16).padStart(2, '0')}`;
 }
 
-// Anytime-TD probabilities rarely clear ~35-40% even for the best red-zone
-// threats, so mapping the ramp across the full 0-100% domain packs every
-// realistic value (and nearly all of a typical week's list) into a sliver
-// near the dim end -- the ramp is technically correct but reads as flat.
-// Saturating at a realistic ceiling instead spreads that same real-world
-// range across the full ramp, so the "who's actually more likely" read
-// stays honest (it's still one fixed, week-over-week-comparable scale --
-// this doesn't renormalize to whoever happens to be in the list) while
-// staying visible with real data, not just wide synthetic spreads.
-const RAMP_CEILING = 40;
+// A real week's list often clusters tightly (every role player sitting
+// within a percentage point or two of each other), so ramping against a
+// fixed domain -- even a realistic one -- can still leave the whole list
+// looking nearly identical. Normalizing against this list's own min/max
+// instead guarantees the ramp uses its full range every week: the
+// slate's most-likely scorer always reads fully vivid and the least
+// likely always reads dimmest, so the ranking is visible at a glance
+// even when the underlying percentages are only a point or two apart.
+function rampWithinRows(rows) {
+  const probs = rows.map((r) => r.probability);
+  const min = Math.min(...probs);
+  const max = Math.max(...probs);
+  return (probability) => (max === min ? 1 : (probability - min) / (max - min));
+}
 
 // The meter's fill is the same hue throughout (a single-series sequential
 // ramp), growing more opaque -- so more vivid -- as the probability rises;
 // the unfilled track is a faint step of that same hue rather than flat
 // slate, so the row's overall "temperature" reads even before the fill ends.
 export default function TouchdownProbability({ rows, accent = '#34d399', emptyMessage = 'No projections yet.' }) {
+  const ramp = rows.length ? rampWithinRows(rows) : null;
   return (
     <div className="rounded-xl bg-slate-800/60 border border-slate-700/60 overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-700/60 flex items-center justify-between">
@@ -34,7 +39,7 @@ export default function TouchdownProbability({ rows, accent = '#34d399', emptyMe
         <ul className="divide-y divide-slate-700/40 max-h-[420px] overflow-y-auto">
           {rows.map((r) => {
             const clamped = Math.min(Math.max(r.probability, 0), 100);
-            const ramped = Math.min(clamped, RAMP_CEILING) / RAMP_CEILING;
+            const ramped = ramp(r.probability);
             return (
               <li key={`${r.name}-${r.team}`} className="px-4 py-2.5">
                 <div className="flex items-center justify-between text-sm mb-1">

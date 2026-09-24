@@ -4,6 +4,7 @@ import WeekGrid from './components/WeekGrid.jsx';
 import TaskModal from './components/TaskModal.jsx';
 import ReminderToast from './components/ReminderToast.jsx';
 import { loadTasks, saveTasks } from './lib/storage.js';
+import { playReminderChime } from './lib/sound.js';
 import { addDays, isoDate, startOfWeek, taskDateTime } from './lib/dates.js';
 
 const REMINDER_WINDOW_MS = 15 * 60 * 1000; // fire for tasks due within the last 15 minutes
@@ -45,6 +46,7 @@ export default function App() {
         });
         if (dueNow.length > 0) {
           setDueReminders((current) => [...current, ...dueNow]);
+          playReminderChime();
           if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             dueNow.forEach((task) => {
               new Notification('Planner Pal 🔔', { body: task.text });

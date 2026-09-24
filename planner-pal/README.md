@@ -16,6 +16,9 @@ week and every hour after school, so there's always room to write down what's ne
 - **Prev / Next / Today** — flip between weeks; today's column is always highlighted.
 - **Saves automatically** — everything is stored in the browser (`localStorage`), so closing
   the tab doesn't lose anything. No account, no sign-up.
+- **Installable as an app** — it's a Progressive Web App: on Android/Chrome, the browser
+  offers to add it to the home screen; on iPhone/iPad, use Safari's Share menu → *Add to Home
+  Screen*. Either way it opens full-screen with its own icon, like a real app.
 
 ## Stack
 
@@ -48,5 +51,6 @@ Then open http://localhost:4200.
 
 - Reminders only fire while the tab is open (or, once you allow notifications, even if it's in
   the background) — Planner Pal doesn't have a backend to send reminders while your device is
-  off or the browser is closed.
+  off or the browser is closed. This is more reliable on Android than iOS, where Safari limits
+  background notifications for installed web apps.
 - Data is stored per-browser. Planning on a different device or browser starts a fresh planner.

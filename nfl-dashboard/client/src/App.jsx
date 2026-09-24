@@ -300,6 +300,7 @@ export default function App() {
                 emptyMessage={predictions.note || 'No projections yet.'}
               />
               <TouchdownProbability
+                accent="#34d399"
                 rows={predictions.touchdowns}
                 emptyMessage={predictions.note || 'No projections yet.'}
               />

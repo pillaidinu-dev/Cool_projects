@@ -6,6 +6,8 @@ with its own client/server, README, and Dockerfile.
 - **[PlanSync](#plansync)** (`client/`, `server/`) — an activity-based matching dating app.
 - **[NFL Week Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for a full
   NFL week's scores, stat leaders, and touchdown scorers.
+- **[Momentum Dashboard](momentum-dashboard/README.md)** (`momentum-dashboard/`) — every US stock
+  up 100%+ year-to-date, screened from live Robinhood market data, with charts.
 
 ---
 

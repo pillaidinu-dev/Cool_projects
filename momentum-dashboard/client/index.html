@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Momentum Dashboard — Stocks Up 100%+ YTD</title>
+<meta name="description" content="US stocks with 100%+ year-to-date price gains, screened live from Robinhood market data." />
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232a78d6' d='M3 17l6-6 4 4 8-8v3l-8 8-4-4-6 6z'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">Broad market screen · Robinhood live data</p>
+        <h1>Stocks up 100%+ YTD</h1>
+        <p class="lede">Every US common stock currently trading at least 2× its 2025-12-31 closing price — S&amp;P names and small/micro caps alike, split-adjusted so reverse splits can't fake a gain.</p>
+      </div>
+      <div class="hero-meta" id="hero-meta"></div>
+    </header>
+
+    <section class="kpi-row" id="kpi-row" aria-label="Summary metrics"></section>
+
+    <section class="panel" aria-labelledby="top-movers-title">
+      <div class="panel-head">
+        <h2 id="top-movers-title">Top 20 gainers</h2>
+        <p class="panel-sub">Ranked by YTD % change</p>
+      </div>
+      <div class="chart-wrap chart-wrap--tall">
+        <canvas id="chart-top20" role="img" aria-label="Bar chart of the top 20 stocks by year-to-date percent gain"></canvas>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <div class="panel" aria-labelledby="scatter-title">
+        <div class="panel-head">
+          <h2 id="scatter-title">Market cap vs. YTD gain</h2>
+          <p class="panel-sub">Log scale · colored by size tier</p>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart-scatter" role="img" aria-label="Scatter plot of market capitalization versus year-to-date percent gain, colored by market cap tier"></canvas>
+        </div>
+        <div class="legend-row" id="scatter-legend"></div>
+      </div>
+      <div class="panel" aria-labelledby="hist-title">
+        <div class="panel-head">
+          <h2 id="hist-title">Distribution of gains</h2>
+          <p class="panel-sub">Count of stocks by YTD gain bucket</p>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart-hist" role="img" aria-label="Histogram of stock counts by year-to-date percent gain bucket"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="spark-title">
+      <div class="panel-head">
+        <h2 id="spark-title">Price trend since Dec 31</h2>
+        <p class="panel-sub">Top 12 movers, weekly close</p>
+      </div>
+      <div class="spark-grid" id="spark-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="table-title">
+      <div class="panel-head panel-head--table">
+        <div>
+          <h2 id="table-title">All qualifying stocks</h2>
+          <p class="panel-sub" id="table-count-sub"></p>
+        </div>
+        <div class="table-controls">
+          <input type="search" id="table-search" placeholder="Search ticker or name…" aria-label="Search ticker or company name" />
+          <div class="chip-row" id="tier-chips" role="group" aria-label="Filter by market cap tier"></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="stocks-table">
+          <thead>
+            <tr>
+              <th data-key="ticker">Ticker</th>
+              <th data-key="name">Name</th>
+              <th data-key="last" class="num">Price</th>
+              <th data-key="ytd_pct" class="num" aria-sort="descending">YTD %</th>
+              <th data-key="day_change_pct" class="num">Today</th>
+              <th data-key="market_cap" class="num">Market cap</th>
+              <th data-key="avg_volume" class="num">Avg volume (30d)</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <h3>Methodology</h3>
+      <p id="methodology-text"></p>
+      <p class="disclaimer">This is a market-data screen, not investment advice or a recommendation to buy or sell any security. Past performance does not indicate future results. Data is a single intraday snapshot and will drift from live prices.</p>
+    </footer>
+  </div>
+
+  <script src="vendor/chart.umd.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

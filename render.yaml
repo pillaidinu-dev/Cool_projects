@@ -14,6 +14,7 @@ services:
         - server/**
       ignoredPaths:
         - nfl-dashboard/**
+        - momentum-dashboard/**
     envVars:
       - key: NODE_ENV
         value: production
@@ -33,3 +34,15 @@ services:
     buildFilter:
       paths:
         - nfl-dashboard/**
+
+  - type: web
+    name: momentum-dashboard
+    env: docker
+    branch: main
+    dockerfilePath: ./momentum-dashboard/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - momentum-dashboard/**

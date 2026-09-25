@@ -19,42 +19,88 @@ Robinhood market data via the Robinhood MCP connector.
 
 This is a **snapshot**, not a live-refreshing feed — the Robinhood MCP connector
 is only reachable from inside a Claude session, not from this deployed server.
-Regenerating the data means re-running the same steps in a Claude session with
-Robinhood MCP access:
+A weekly Routine re-runs the steps below in a fresh Claude session (see
+"Refreshing the data"). The fiddly, easy-to-get-wrong parts (split-adjustment
+verification, ETN exclusion, the >=100% threshold, the YTD-anchor date math)
+live in `scripts/*.mjs`, not in a prompt someone re-derives from memory —
+that's deliberate, see the postmortem in step 2.
 
-1. **Screen the broad market.** A saved Robinhood scanner (`YTD 100%+ Gainers
-   (Broad Market)`) filters `FILTER_TYPE_INSTRUMENT_TYPE = STOCK`, price ≥ $1,
-   30-day average volume ≥ 50,000 shares, and an expression filter:
+1. **Compute the YTD anchor.** The scanner has no native "since Jan 1" filter,
+   so it's built as "price >= 2x price N trading days ago," where `N` is a
+   moving count of NYSE trading days that has to be recomputed on every run:
+   ```bash
+   node scripts/trading-day-offset.mjs        # or: ... 2026-09-25
    ```
-   tradeAllDay.price >= 2 * close(candleCount=184, candlePeriod="1d", session="all")
+   This is pure calendar math against a hardcoded NYSE holiday calendar (no
+   network call) — see the script for the holiday list if the exchange
+   calendar ever changes.
+
+2. **Screen the broad market.** Call `preview_scan` (or `run_scan` on the
+   saved scan `YTD 100%+ Gainers (Broad Market)`, then edit its filter's
+   `candleCount` if the anchor from step 1 changed) with:
+   - `FILTER_TYPE_INSTRUMENT_TYPE = STOCK`
+   - `FILTER_TYPE_LAST >= 1`
+   - `FILTER_TYPE_AVERAGE_VOLUME >= 50000` (interval `1d`, length `30`)
+   - expression filter: `tradeAllDay.price >= 2 * close(candleCount=<N from step 1>, candlePeriod="1d", session="all")`
+   - columns: `Market cap` (needed by the rebuild script; everything else it
+     needs — `Last`, `Name`, `Average volume`, `Volume`, `% Change` — comes
+     back by default)
+
+   Robinhood's scan tools cap a single response at 200 rows. If `total_items`
+   in the response is over 200, re-run with an added
+   `FILTER_TYPE_LAST < <price of the 200th/last row>` filter to get the rest,
+   and concatenate every page's `results` array into one flat JSON array —
+   save it as `scripts/raw/scan_results.json`.
+
+   **Do not trust this scan's own `YTD %`/`YTD Baseline Close` columns if you
+   add them** — they're computed from Robinhood's raw, unadjusted `close()`,
+   which is wrong for any ticker that split during the year (see step 4).
+   `rebuild-gainers.mjs` ignores them entirely and recomputes from scratch.
+
+3. **Fetch a split-adjusted baseline for every candidate.** For each ticker
+   from step 2 (batched 10 per call — `get_equity_historicals` takes up to 10
+   symbols), fetch a single day of history for the prior year's last trading
+   day (e.g. `start_time: "2025-12-31T00:00:00Z"`, `end_time:
+   "2026-01-01T23:59:00Z"`, `interval: "day"`, default `adjustment_type` —
+   i.e. **do not** pass `adjustment_type: "none"`). Build an object
+   `{ TICKER: close_price }` from each response's `bars[0].close_price`
+   (skip tickers with an empty `bars` array — usually a stock that IPO'd
+   after the baseline date) and save it as `scripts/raw/baselines.json`.
+
+4. **Rebuild the verified dataset.**
+   ```bash
+   node scripts/rebuild-gainers.mjs \
+     --scan scripts/raw/scan_results.json \
+     --baselines scripts/raw/baselines.json \
+     --out data/gainers.json
    ```
-   `184` is the number of US trading days between 2025-12-31 and the snapshot
-   date (2026-09-25) — re-derive it for a new date by counting trading days, or
-   just re-run the scan on the day you regenerate the data (the candle count
-   needs to match "today" for the comparison to land on Dec 31).
+   This is where the actual "100%+ YTD" rule lives: it recomputes
+   `(current_price - split_adjusted_baseline) / split_adjusted_baseline` for
+   every row using the step-3 baseline (not the scan's raw one), drops
+   anything that doesn't clear 100% on that corrected number, and drops
+   ETN/leveraged/inverse products by name. Building this dashboard once
+   *without* this step put 37 reverse-split artifacts at the top of the
+   list — including one "top gainer" that had actually **fallen** ~74% for
+   the year, because a reverse split had multiplied its current price
+   without adjusting the old one it was being compared against. Any prompt
+   or agent regenerating this data must run this script rather than
+   recomputing the filter inline — that bug is exactly what re-deriving the
+   logic by hand reproduces.
 
-2. **Verify every candidate against split-adjusted prices.** This step is not
-   optional. The scanner's `close()` expression returns **raw, unadjusted**
-   historical prices, but a stock that did a reverse split during the year will
-   show a huge fake "gain" under raw prices (the reverse split multiplies the
-   *current* price without adjusting the old one). Building this dashboard once
-   without this step put 37 reverse-split artifacts in the top of the list —
-   including one "top gainer" that was actually down ~74% for the year. The fix:
-   fetch each candidate's actual **2025-12-31 close with `adjustment_type=split`**
-   (the default) via `get_equity_historicals`, and recompute
-   `(current_price - split_adjusted_close) / split_adjusted_close`. Only keep
-   rows where that recomputed number is still ≥ 100%.
+5. **Fetch sparklines for the new top movers.** Take the top ~20 tickers from
+   the just-written `data/gainers.json` (the ranking shifts after step 4's
+   correction, so use *this* list, not the raw scan's top tickers). Fetch
+   `get_equity_historicals` for them (batched 10 per call, `interval: "week"`,
+   `start_time` = the prior year-end, default split-adjusted), concatenate
+   the `results` arrays into `scripts/raw/sparklines_raw.json`, then:
+   ```bash
+   node scripts/rebuild-sparklines.mjs \
+     --raw scripts/raw/sparklines_raw.json \
+     --out data/sparklines.json
+   ```
 
-3. **Drop non-equity noise.** A handful of leveraged/inverse ETNs pass the raw
-   filters (Robinhood classifies some of them as `STOCK`); they're excluded by
-   name pattern (`ETN|Leveraged|Inverse`).
-
-4. **Pull weekly closes** for the top movers (`get_equity_historicals`, weekly
-   interval, split-adjusted) for the sparkline charts.
-
-The result — `data/gainers.json` and `data/sparklines.json` — is what the
-dashboard actually reads. `data/gainers.json` carries a `methodology` block
-describing exactly what was screened.
+`data/gainers.json` carries a `methodology` block describing exactly what was
+screened, generated fresh by `rebuild-gainers.mjs` on every run.
 
 ## Running locally
 
@@ -69,13 +115,13 @@ and the `data/` folder — there's no build step and no database.
 
 ## Refreshing the data
 
-There's no automated refresh (see above — it needs a live Robinhood MCP
-session). To refresh: ask Claude, with Robinhood MCP access, to re-run the scan
-above, re-verify the split-adjusted YTD for each result, and overwrite
-`data/gainers.json` / `data/sparklines.json`. The saved scan (`YTD 100%+
-Gainers (Broad Market)`) is already in the Robinhood account it was created
-from — `run_scan` on it gets the current raw candidate list; steps 2–4 above
-still need to be redone by hand (or by Claude) each time.
+A weekly Routine (Saturday mornings, US Eastern) spawns a fresh Claude session
+with Robinhood MCP and push access to this repo, which runs the pipeline above
+end to end and commits `data/gainers.json` + `data/sparklines.json` straight to
+`main`. To trigger a refresh manually instead, ask Claude (with Robinhood MCP
+access) to follow the "Data pipeline" steps above — the saved scan
+(`YTD 100%+ Gainers (Broad Market)`) already exists in the connected Robinhood
+account for step 2's `run_scan` path.
 
 ## Stack
 

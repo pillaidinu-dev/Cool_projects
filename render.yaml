@@ -36,6 +36,18 @@ services:
         - nfl-dashboard/**
 
   - type: web
+    name: planner-pal
+    env: docker
+    branch: main
+    dockerfilePath: ./planner-pal/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - planner-pal/**
+
+  - type: web
     name: momentum-dashboard
     env: docker
     branch: main

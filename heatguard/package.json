@@ -1,0 +1,17 @@
+{
+  "name": "heatguard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI agent that protects outdoor workers from heat stress",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "express": "^4.19.2"
+  }
+}

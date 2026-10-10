@@ -141,7 +141,7 @@ Target: **submit by 30 Nov 2026**, ahead of the earliest deadline reading.
 - [ ] Registered on dubaichamberdigital.com/en/create-ai-agents
 - [ ] Official terms read (IP, team, data, eligibility)
 - [ ] 5+ validation interviews
-- [ ] Working prototype (agent reasons + calls tools + takes actions)
+- [ ] Working prototype (agent reasons + calls tools + takes actions) — v1 in [`heatguard/`](../heatguard/README.md)
 - [ ] Pitch deck
 - [ ] Demo video (2–3 min)
 - [ ] Submitted before 30 Nov 2026

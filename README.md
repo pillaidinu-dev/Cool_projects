@@ -6,6 +6,8 @@ with its own client/server, README, and Dockerfile.
 - **[PlanSync](#plansync)** (`client/`, `server/`) — an activity-based matching dating app.
 - **[NFL Week Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for a full
   NFL week's scores, stat leaders, and touchdown scorers.
+- **[HeatGuard](heatguard/README.md)** (`heatguard/`) — an AI agent that protects outdoor workers
+  from heat stress (Dubai Create AI Agents Championship entry).
 
 ---
 

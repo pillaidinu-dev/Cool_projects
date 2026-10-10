@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HeatGuard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E☀%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">☀</span>
+      <div>
+        <h1>HeatGuard</h1>
+        <p id="site-name" class="muted">Loading…</p>
+      </div>
+    </div>
+    <div class="controls">
+      <span id="agent-badge" class="badge">agent</span>
+      <div class="segmented" id="scenarios" role="group" aria-label="Weather"></div>
+      <label class="muted small">Speed
+        <select id="time-scale">
+          <option value="1">1× real time</option>
+          <option value="20">20× demo</option>
+          <option value="60">60× fast demo</option>
+        </select>
+      </label>
+      <button id="review" class="btn">Ask agent to review</button>
+      <button id="reset" class="btn ghost">Reset</button>
+    </div>
+  </header>
+
+  <section id="conditions" class="conditions"></section>
+
+  <main class="grid">
+    <section class="panel">
+      <h2>Crews</h2>
+      <div id="crews"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Supervisor alerts</h2>
+      <div id="alerts" class="feed"></div>
+      <h2>Agent log</h2>
+      <div id="log" class="feed"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Worker phone</h2>
+      <label class="small muted">Viewing as
+        <select id="worker-select"></select>
+      </label>
+      <label class="small muted"><input type="checkbox" id="auto-voice" /> Read new messages aloud</label>
+      <div class="phone">
+        <div class="phone-head" id="phone-head"></div>
+        <div class="phone-body" id="phone-body"></div>
+        <div class="phone-actions">
+          <button class="btn ok" data-reply="1">1 · I'm OK</button>
+          <button class="btn bad" data-reply="2">2 · Unwell</button>
+        </div>
+        <form id="reply-form" class="reply-form">
+          <input id="reply-text" placeholder="Type a reply, e.g. “head is spinning”" autocomplete="off" />
+          <button class="btn">Send</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

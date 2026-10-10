@@ -1,0 +1,891 @@
+<title>Snack Stall Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone-first column. Running P/L strip on top, big tap tiles to ring up an order, then the numbers, sales log and spend. */
+:root{
+  --bg:#f3f6ef; --surface:#ffffff; --sunk:#e8eee1; --line:#d5dfcb;
+  --fg:#1c2618; --muted:#5d6b55;
+  --leaf:#2f6b2a; --leaf-ink:#ffffff; --turmeric:#d89a12; --rose:#c94f7c;
+  --good:#2f7d32; --bad:#c0392b;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121710; --surface:#1b2218; --sunk:#232c1f; --line:#2f3a2a;
+  --fg:#e9efe3; --muted:#9aa891;
+  --leaf:#6fbf5f; --leaf-ink:#0f170c; --turmeric:#f0b43a; --rose:#e57aa2;
+  --good:#6fcf73; --bad:#ff7b6b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121710; --surface:#1b2218; --sunk:#232c1f; --line:#2f3a2a;
+  --fg:#e9efe3; --muted:#9aa891;
+  --leaf:#6fbf5f; --leaf-ink:#0f170c; --turmeric:#f0b43a; --rose:#e57aa2;
+  --good:#6fcf73; --bad:#ff7b6b; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums}
+.wrap{max-width:680px;margin:0 auto;padding-inline:16px;padding-block:14px 80px;display:flex;flex-direction:column;gap:22px}
+h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:1.35rem;font-weight:800;letter-spacing:-.01em}
+h2{font-size:1.05rem;font-weight:600}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--turmeric);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.status{font-size:.8rem;color:var(--muted)}
+
+/* P/L strip */
+.pl{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pl .v{font-family:var(--display);font-weight:800;font-size:1.45rem;line-height:1.1}
+.pl .v.good{color:var(--good)} .pl .v.bad{color:var(--bad)}
+.be{grid-column:1/-1;display:flex;flex-direction:column;gap:5px}
+.bar{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.bar>i{display:block;height:100%;width:0;background:var(--turmeric);border-radius:99px;transition:width .4s}
+.bar.done>i{background:var(--good)}
+.be small{color:var(--muted);font-size:.8rem}
+
+/* Tiles */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{position:relative;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 14px 12px;display:flex;flex-direction:column;gap:2px;min-height:96px;border-left:6px solid var(--c,var(--leaf));transition:transform .08s}
+.tile:active{transform:scale(.97)}
+.tile .n{font-weight:700;font-size:1.02rem}
+.tile .u{font-size:.8rem;color:var(--muted)}
+.tile .p{margin-top:auto;font-family:var(--display);font-weight:800;font-size:1.3rem}
+.tile .q{position:absolute;top:10px;right:10px;min-width:28px;height:28px;padding:0 8px;border-radius:99px;background:var(--leaf);color:var(--leaf-ink);font-weight:700;display:grid;place-items:center}
+.tile .q[hidden]{display:none!important}
+.tile .left{font-size:.78rem;font-weight:700;color:var(--muted)}
+.tile .left.low{color:var(--turmeric)}
+.tile .left.out{color:var(--bad)}
+.tile.soldout{opacity:.6;border-left-color:var(--bad)}
+
+/* Cart */
+.cart{background:var(--sunk);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px}
+.line{display:flex;align-items:center;gap:10px}
+.line .nm{flex:1;min-width:0}
+.step{width:34px;height:34px;border-radius:10px;background:var(--surface);border:1px solid var(--line);font-size:1.1rem;font-weight:700}
+.line .qt{min-width:20px;text-align:center;font-weight:700}
+.line .amt{min-width:52px;text-align:right;font-weight:600}
+.total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px dashed var(--line);padding-top:8px}
+.total b{font-family:var(--display);font-size:1.6rem}
+.change{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.bills{display:flex;flex-wrap:wrap;gap:8px}
+.bill{min-width:56px;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--sunk);font-weight:700}
+.bill[aria-pressed="true"]{background:var(--turmeric);border-color:var(--turmeric);color:#1c2618}
+.given{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:10px;align-items:center}
+.due{text-align:right;font-weight:600;color:var(--muted)}
+.due b{display:block;font-family:var(--display);font-size:1.7rem;line-height:1.1;color:var(--good)}
+.due.short b{color:var(--bad)}
+.pay{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pay button{padding:14px 10px;border-radius:12px;font-weight:700;font-size:1.05rem}
+.btn-cash{background:var(--leaf);color:var(--leaf-ink)}
+.btn-zelle{background:var(--fg);color:var(--bg)}
+.ghost{font-size:.85rem;color:var(--muted);text-decoration:underline;align-self:flex-start;padding:2px 0}
+.hint{color:var(--muted);font-size:.88rem;margin:0}
+
+/* Breakdown */
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.card .v{font-family:var(--display);font-weight:800;font-size:1.3rem}
+.rows{display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 14px;align-items:baseline}
+.row .bar{grid-column:1/-1;height:6px}
+.row .bar>i{background:var(--c,var(--leaf))}
+.muted{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:10px}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+
+/* Lists */
+.list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.list li{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
+.list .main{flex:1;min-width:0}
+.list .main div:first-child{overflow-wrap:anywhere}
+.list .sub{font-size:.8rem;color:var(--muted)}
+.chip{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--sunk);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.chip.cash{background:color-mix(in srgb,var(--leaf) 18%,transparent);color:var(--leaf)}
+.del{font-size:.8rem;color:var(--muted);padding:6px 8px;border-radius:8px}
+.del.armed{background:var(--bad);color:#fff}
+.empty{padding:14px 12px;color:var(--muted);font-size:.9rem}
+
+form.add{display:grid;grid-template-columns:minmax(0,1fr) 100px auto;gap:8px}
+input{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0;width:100%}
+.btn-add{background:var(--leaf);color:var(--leaf-ink);border-radius:10px;padding:0 16px;font-weight:700}
+.secondary{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font-weight:600;font-size:.88rem}
+
+.editor{background:var(--sunk);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px}
+.erows{display:flex;flex-direction:column;gap:8px}
+.erow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) 72px 72px 34px;gap:6px;align-items:center}
+.ehead{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.eactions{display:flex;gap:8px;flex-wrap:wrap}
+.eactions .btn-add{padding:10px 16px}
+.x{width:34px;height:34px;border-radius:10px;color:var(--bad);font-size:1.2rem;font-weight:700}
+.spedit{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:6px;flex:1;min-width:0}
+.mini{font-size:.8rem;font-weight:600;padding:6px 8px;border-radius:8px;color:var(--leaf)}
+@media (max-width:460px){.erow{grid-template-columns:minmax(0,1fr) 62px 62px 34px}.erow .unit{grid-column:1/2;grid-row:2}.ehead .hs{display:none}}
+.danger{color:var(--bad)}
+.btn-danger{background:var(--bad);color:#fff;border-radius:10px;padding:10px 16px;font-weight:700}
+.confirm{display:flex;flex-direction:column;gap:8px}
+.confirm p{margin:0;font-weight:600}
+.exp{gap:12px}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.opt{text-align:left;border:1px solid var(--line);background:var(--sunk);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.opt b{font-size:.95rem}
+.opt span{font-size:.8rem;color:var(--muted)}
+.opt[aria-checked="true"]{border-color:var(--leaf);background:color-mix(in srgb,var(--leaf) 14%,var(--surface));box-shadow:inset 0 0 0 1px var(--leaf)}
+.field{display:flex;flex-direction:column;gap:4px}
+select{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;max-width:100%}
+.exptext{width:100%;min-height:140px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}
+@media (max-width:380px){.opts{grid-template-columns:1fr}}
+.stk .main div:first-child{font-weight:600}
+.stkedit{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1;min-width:0}
+.stkedit .nm{flex-basis:100%;font-weight:600}
+.stkedit input{width:80px}
+.stkedit .step{width:auto;padding:0 10px}
+.stkedit .acts{display:flex;gap:6px;margin-left:auto}
+.xform{gap:10px}
+.kinds{display:flex;flex-wrap:wrap;gap:6px}
+.kind{padding:7px 12px;border-radius:99px;border:1px solid var(--line);background:var(--sunk);font-weight:600;font-size:.88rem}
+.kind[aria-checked="true"]{background:var(--turmeric);border-color:var(--turmeric);color:#1c2618}
+.xamt{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.xamt input{flex:1 1 120px;width:auto}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.quick .bill{min-width:48px;padding:8px 10px}
+.chip.extra{background:color-mix(in srgb,var(--turmeric) 22%,transparent);color:var(--fg)}
+.undo{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:8px 10px}
+.undo .main{flex:1;min-width:0}
+.undo #undoWhat{font-size:.88rem;overflow-wrap:anywhere}
+.undo.armed{border-color:var(--bad);border-style:solid}
+.undo .danger.armed{background:var(--bad);color:#fff;border-color:var(--bad)}
+.fixing{background:color-mix(in srgb,var(--turmeric) 25%,var(--surface));border-radius:10px;padding:8px 10px;font-size:.88rem;display:flex;flex-direction:column;gap:2px}
+.fixing .ghost{color:var(--fg)}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 12px 10px 16px;border-radius:12px;display:flex;gap:14px;align-items:center;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:20}
+.toast button{color:var(--turmeric);font-weight:700;padding:4px 6px}
+.notice{background:color-mix(in srgb,var(--turmeric) 20%,var(--surface));border-radius:12px;padding:10px 12px;font-size:.9rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>Snack Stall Ledger</h1>
+    <span class="status" id="status">Connecting…</span>
+  </div>
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="pl" aria-live="polite">
+    <div><div class="label">Income</div><div class="v" id="plRev">$0</div></div>
+    <div><div class="label">Spend</div><div class="v" id="plSpend">$0</div></div>
+    <div><div class="label">Profit / loss</div><div class="v" id="plNet">$0</div></div>
+    <div class="be"><div class="bar" id="beBar"><i></i></div><small id="beText">Add your spend to see break-even.</small></div>
+  </div>
+
+  <section aria-labelledby="hSale">
+    <div class="sechead"><h2 id="hSale">New order</h2><button class="secondary" id="editMenuBtn" type="button">Edit menu</button></div>
+    <div class="undo" id="undoBar" hidden>
+      <div class="main"><span class="label">Last sale</span><div id="undoWhat"></div></div>
+      <button class="secondary" id="undoFix" type="button">Fix</button>
+      <button class="secondary danger" id="undoBtn" type="button">Undo</button>
+    </div>
+    <div class="tiles" id="tiles"><p class="hint">Loading menu…</p></div>
+    <form class="editor" id="menuEditor" hidden>
+      <p class="hint">Change names, sizes and prices. Stock is how many you've made in total; it counts down as you sell. Made more? Raise the number. Leave it blank to not track. Sales you've already recorded keep the price they were sold at.</p>
+      <div class="erows" id="menuRows"></div>
+      <button class="ghost" id="addItemBtn" type="button">+ Add item</button>
+      <div class="eactions"><button class="btn-add" type="submit">Save menu</button><button class="secondary" id="cancelMenuBtn" type="button">Cancel</button></div>
+    </form>
+    <div class="cart" id="cart" hidden>
+      <div class="fixing" id="fixBanner" hidden><span id="fixText"></span><button class="ghost" id="fixCancel" type="button">Cancel fix</button></div>
+      <div id="cartLines" class="rows"></div>
+      <div class="total"><span class="label">Order total</span><b id="cartTotal">$0</b></div>
+      <div class="change">
+        <span class="label">Cash change · customer gave</span>
+        <div class="bills" id="bills"></div>
+        <div class="given">
+          <input id="tendered" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Other amount" aria-label="Amount customer gave">
+          <div class="due" id="changeDue" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="pay">
+        <button class="btn-cash" id="payCash" type="button">Cash</button>
+        <button class="btn-zelle" id="payZelle" type="button">Zelle</button>
+      </div>
+      <button class="ghost" id="clearCart" type="button">Clear order</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="hStock">
+    <div class="sechead"><h2 id="hStock">Stock</h2><span class="hint">How many you've made of each</span></div>
+    <ul class="list" id="stockList"><li class="empty">Loading stock…</li></ul>
+  </section>
+
+  <section aria-labelledby="hNums">
+    <h2 id="hNums">How it's going</h2>
+    <div class="grid2">
+      <div class="card"><span class="label">Cash collected</span><span class="v" id="cashTot">$0</span><span class="muted" id="cashN">0 orders</span></div>
+      <div class="card"><span class="label">Zelle received</span><span class="v" id="zelleTot">$0</span><span class="muted" id="zelleN">0 orders</span></div>
+    </div>
+    <div class="card"><span class="label">By item</span><div class="rows" id="byItem"></div></div>
+    <div class="card"><span class="label">By day</span><div class="rows" id="byDay"><span class="muted">No sales yet.</span></div></div>
+  </section>
+
+  <section aria-labelledby="hLog">
+    <div class="sechead"><h2 id="hLog">Sales log</h2><a class="ghost" href="#export">Export</a></div>
+    <ul class="list" id="salesList"><li class="empty">No sales yet. Your first order will show up here, for both of you.</li></ul>
+    <button class="ghost" id="moreBtn" type="button" hidden>Show all</button>
+  </section>
+
+  <section aria-labelledby="hExtra">
+    <div class="sechead"><h2 id="hExtra">Tips and other income</h2><span class="hint">Money that isn't a menu sale</span></div>
+    <form class="card xform" id="extraForm">
+      <div class="kinds" role="radiogroup" aria-label="Type" id="extraKinds"></div>
+      <input id="extraNote" placeholder="Note (optional), e.g. catering order" aria-label="Note" hidden>
+      <div class="xamt">
+        <input id="extraAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="$ amount" aria-label="Amount" required>
+        <div class="quick" id="extraQuick"></div>
+      </div>
+      <div class="pay">
+        <button class="btn-cash" type="submit" data-pay="cash">Add as cash</button>
+        <button class="btn-zelle" type="submit" data-pay="zelle">Add as Zelle</button>
+      </div>
+    </form>
+    <ul class="list" id="extraList"><li class="empty">No tips or other income yet. They count toward your profit and your cash or Zelle totals.</li></ul>
+  </section>
+
+  <section aria-labelledby="hSpend">
+    <h2 id="hSpend">Spend</h2>
+    <ul class="list" id="spendList"><li class="empty">No spend logged yet. Add stall fee, supplies and ingredients below.</li></ul>
+    <form class="add" id="spendForm">
+      <input id="spendLabel" placeholder="What (e.g. ice)" aria-label="What you spent on" required>
+      <input id="spendAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="$" aria-label="Amount" required>
+      <button class="btn-add" type="submit">Add</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="hExport" id="export">
+    <h2 id="hExport">Export to CSV</h2>
+    <div class="card exp">
+      <div class="opts" role="radiogroup" aria-label="What to export" id="expKinds"></div>
+      <label class="field"><span class="label">Sales from</span>
+        <select id="expDay"><option value="all">All days</option></select>
+      </label>
+      <p class="hint" id="expInfo"></p>
+      <div class="eactions">
+        <button class="btn-add" id="expSave" type="button">Download CSV</button>
+        <button class="secondary" id="expCopy" type="button">Copy as CSV</button>
+      </div>
+      <textarea id="expText" class="exptext" readonly hidden aria-label="CSV text"></textarea>
+    </div>
+  </section>
+
+  <section aria-labelledby="hReset">
+    <h2 id="hReset">Dry runs and reset</h2>
+    <div class="card">
+      <p class="hint">Practising before the event? Record test orders and tips as normal, then clear them here. Your menu, prices, stock counts and spend stay as they are, and stock goes back to full.</p>
+      <div class="eactions" id="resetIdle"><button class="secondary danger" id="resetBtn" type="button">Clear all sales</button></div>
+      <div id="resetConfirm" class="confirm" hidden>
+        <p id="resetMsg"></p>
+        <div class="eactions"><button class="btn-danger" id="resetYes" type="button">Yes, clear them</button><button class="secondary" id="resetNo" type="button">Cancel</button></div>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="toastUndo" type="button">Undo</button></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const COLORS = ["var(--turmeric)","var(--leaf)","var(--rose)","#7a6bd1","#2a8f9c","#b4632f"];
+  let db = null, user = null, uid = null, downloads = null;
+  let menu = [], sales = [], spend = [], extras = [], cart = {}, showAll = false, writable = true;
+
+  const money = n => { const a = Math.abs(n); return (n < 0 ? "−" : "") + "$" + (a % 1 ? a.toFixed(2) : a.toFixed(0)); };
+  const dayKey = ms => { const d = new Date(ms); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+  const dayName = k => { const [y,m,d] = k.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}); };
+  const timeOf = ms => new Date(ms).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+  const el = (tag, props, ...kids) => { const e = document.createElement(tag); Object.assign(e, props || {}); kids.forEach(k => e.append(k)); return e; };
+  const colorFor = id => { const i = menu.findIndex(m => m.id === id); return COLORS[(i < 0 ? 0 : i) % COLORS.length]; };
+
+  function setStatus(t){ $("status").textContent = t; }
+  function notice(t){ $("notice").textContent = t; $("notice").hidden = !t; }
+
+  /* ---------- Menu tiles ---------- */
+  function renderTiles(){
+    const box = $("tiles"); box.replaceChildren();
+    $("editMenuBtn").disabled = !writable;
+    if (!menu.length){ box.append(el("p",{className:"hint",textContent:"No menu items yet."})); return; }
+    const sold = soldById();
+    menu.forEach((m,i) => {
+      const q = el("span",{className:"q",textContent:cart[m.id]||""}); q.hidden = !cart[m.id];
+      const left = remaining(m, sold);
+      const stock = el("span",{className:"left"});
+      if (left != null){
+        stock.textContent = left > 0 ? left + " left" : left === 0 ? "Sold out" : "Sold out · " + (-left) + " over";
+        if (left <= 0) stock.classList.add("out"); else if (left <= Math.max(3, m.stock*0.15)) stock.classList.add("low");
+      }
+      const b = el("button",{className:"tile"+(left != null && left <= 0 ? " soldout" : ""),type:"button",disabled:!writable},
+        el("span",{className:"n",textContent:m.name}),
+        el("span",{className:"u",textContent:m.unit||""}), stock,
+        el("span",{className:"p",textContent:money(m.price)}), q);
+      b.style.setProperty("--c", COLORS[i % COLORS.length]);
+      b.setAttribute("aria-label", "Add "+m.name+", "+money(m.price));
+      b.onclick = () => { cart[m.id] = (cart[m.id]||0)+1; renderCart(); };
+      box.append(b);
+    });
+  }
+
+  // units sold per item across all recorded sales
+  function soldById(){ const o = {}; sales.forEach(s => { if (fixing && s.id === fixing.id) return; (s.items||[]).forEach(i => { o[i.id] = (o[i.id]||0) + i.qty; }); }); return o; }
+  // stock left after recorded sales and what's in the current order; null when the item has no stock count
+  function remaining(m, sold){ return typeof m.stock === "number" ? m.stock - (sold[m.id]||0) - (cart[m.id]||0) : null; }
+
+  function cartTotal(){ return menu.reduce((s,m) => s + (cart[m.id]||0)*m.price, 0); }
+
+  function renderCart(){
+    const ids = Object.keys(cart).filter(k => cart[k] > 0);
+    $("cart").hidden = !ids.length;
+    const lines = $("cartLines"); lines.replaceChildren();
+    menu.filter(m => cart[m.id] > 0).forEach(m => {
+      const minus = el("button",{className:"step",type:"button",textContent:"−"}); minus.setAttribute("aria-label","One less "+m.name);
+      const plus = el("button",{className:"step",type:"button",textContent:"+"}); plus.setAttribute("aria-label","One more "+m.name);
+      minus.onclick = () => { cart[m.id]--; if (cart[m.id] <= 0) delete cart[m.id]; renderCart(); };
+      plus.onclick = () => { cart[m.id]++; renderCart(); };
+      lines.append(el("div",{className:"line"}, el("span",{className:"nm",textContent:m.name}), minus, el("span",{className:"qt",textContent:cart[m.id]}), plus, el("span",{className:"amt",textContent:money(cart[m.id]*m.price)})));
+    });
+    const t = cartTotal();
+    $("cartTotal").textContent = money(t);
+    $("fixBanner").hidden = !fixing;
+    $("clearCart").textContent = fixing ? "Cancel fix" : "Clear order";
+    if (fixing) $("cart").hidden = false;
+    $("payCash").textContent = (fixing ? "Save as cash · " : "Cash · ") + money(t);
+    $("payZelle").textContent = (fixing ? "Save as Zelle · " : "Zelle · ") + money(t);
+    $("payCash").disabled = $("payZelle").disabled = !t;
+    if (!ids.length) tendered = null;
+    renderChange();
+    renderTiles();
+  }
+
+  /* ---------- Cash change ---------- */
+  let tendered = null;
+  function renderChange(){
+    const t = cartTotal();
+    // the bills a customer would plausibly hand over for this total
+    const opts = [5,10,20,50,100].filter(b => b >= t).slice(0,4);
+    if (t > 0 && !opts.includes(t)) opts.unshift(t);
+    const box = $("bills"); box.replaceChildren();
+    opts.forEach(v => {
+      const b = el("button",{className:"bill",type:"button",textContent: v === t ? "Exact" : money(v)});
+      b.setAttribute("aria-pressed", String(tendered === v && $("tendered").value === ""));
+      b.onclick = () => { tendered = v; $("tendered").value = ""; renderChange(); };
+      box.append(b);
+    });
+    const due = $("changeDue"); due.replaceChildren(); due.className = "due";
+    if (tendered == null || !t) { due.textContent = "Tap what they handed you"; return; }
+    const diff = Math.round((tendered - t)*100)/100;
+    if (diff < 0) { due.className = "due short"; due.append("Still owes", el("b",{textContent:money(-diff)})); }
+    else due.append("Give back", el("b",{textContent:money(diff)}));
+  }
+  $("tendered").addEventListener("input", e => { const v = parseFloat(e.target.value); tendered = v >= 0 ? v : null; renderChange(); });
+
+  async function record(pay){
+    if (!db) return;
+    const items = menu.filter(m => cart[m.id] > 0).map(m => ({id:m.id,name:m.name,price:m.price,qty:cart[m.id]}));
+    if (!items.length) return;
+    const total = items.reduce((s,i) => s + i.qty*i.price, 0);
+    const body = {items,total,pay,at:Date.now()}; if (uid) body.by = uid;
+    const old = fixing;
+    if (old){ body.at = old.at; body.fixedAt = Date.now(); if (old.by) body.by = old.by; }
+    $("payCash").disabled = $("payZelle").disabled = true;
+    try {
+      const ref = db.collection("sales").doc();
+      await ref.set(body);
+      if (old){
+        // replace the mistaken sale: new one is saved first, so nothing is lost if the delete fails
+        const {id, ...oldBody} = old;
+        await db.collection("sales").doc(id).delete();
+        fixing = null;
+        cart = {}; tendered = null; $("tendered").value = ""; renderCart();
+        toast("Sale fixed: now " + money(total) + " " + (pay==="cash"?"cash":"Zelle"), async () => { await db.collection("sales").doc(id).set(oldBody); await ref.delete(); });
+      } else {
+        cart = {}; tendered = null; $("tendered").value = ""; renderCart();
+        toast("Recorded "+money(total)+" "+(pay==="cash"?"cash":"Zelle"), async () => { await ref.delete(); });
+      }
+    } catch(e){ failed(e, "Couldn't save that order."); }
+    finally { $("payCash").disabled = $("payZelle").disabled = false; }
+  }
+
+  function failed(e, msg){
+    if (e && e.code === "invalid_argument"){ writable = false; notice("You can view this ledger but not add to it. Ask the owner to share it with you as an Editor."); renderTiles(); }
+    else if (e && e.code === "quota_exceeded") notice("The ledger is full. Export a CSV and clear old sales.");
+    else notice(msg + " Check your signal and try again.");
+  }
+
+  let toastTimer;
+  function toast(msg, undo){
+    $("toastMsg").textContent = msg; $("toast").hidden = false; $("toastUndo").hidden = !undo;
+    $("toastUndo").onclick = async () => { $("toast").hidden = true; try { await undo(); } catch(e){ failed(e,"Couldn't undo."); } };
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; }, 10000);
+  }
+
+  /* ---------- Undo and fix ---------- */
+  let fixing = null;
+  function startFix(s){
+    fixing = s;
+    cart = {};
+    const missing = [];
+    (s.items||[]).forEach(i => { if (menu.some(m => m.id === i.id)) cart[i.id] = (cart[i.id]||0) + i.qty; else missing.push(i.name); });
+    tendered = null; $("tendered").value = "";
+    $("fixText").textContent = "Fixing the " + timeOf(s.at) + " sale (" + money(s.total) + " " + s.pay + "). Change the items, then tap Cash or Zelle to save it in place of the old one." + (missing.length ? " " + missing.join(", ") + " is no longer on the menu and was left out." : "");
+    renderCart();
+    $("hSale").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
+  }
+  function cancelFix(){ fixing = null; cart = {}; tendered = null; $("tendered").value = ""; renderCart(); }
+  $("fixCancel").onclick = cancelFix;
+
+  function lastSale(){
+    // the most recent sale keyed on this phone's account; anyone's if we can't tell who you are
+    return sales.find(s => !uid || s.by === uid) || null;
+  }
+  function agoText(ms){ const m = Math.round((Date.now() - ms)/60000); return m < 1 ? "just now" : m < 60 ? m + " min ago" : timeOf(ms); }
+  function renderUndo(){
+    const s = lastSale(), bar = $("undoBar");
+    bar.hidden = !s || !writable;
+    resetUndoArm();
+    if (!s) return;
+    $("undoWhat").textContent = (s.items||[]).map(i => i.qty + "× " + i.name).join(", ") + " · " + money(s.total) + " " + s.pay + " · " + agoText(s.at);
+  }
+  function resetUndoArm(){ $("undoBar").classList.remove("armed"); $("undoBtn").classList.remove("armed"); $("undoBtn").textContent = "Undo"; }
+  let undoArmTimer;
+  $("undoBtn").onclick = async () => {
+    const s = lastSale(); if (!s || !db) return;
+    const btn = $("undoBtn");
+    if (!btn.classList.contains("armed")){
+      btn.classList.add("armed"); $("undoBar").classList.add("armed"); btn.textContent = "Tap to remove";
+      clearTimeout(undoArmTimer); undoArmTimer = setTimeout(resetUndoArm, 4000); return;
+    }
+    clearTimeout(undoArmTimer); btn.disabled = true;
+    const {id, ...body} = s;
+    try {
+      await db.collection("sales").doc(id).delete();
+      if (fixing && fixing.id === id) cancelFix();
+      toast("Removed " + money(s.total) + " sale", async () => { await db.collection("sales").doc(id).set(body); });
+    } catch(e){ failed(e, "Couldn't undo that sale."); }
+    finally { btn.disabled = false; resetUndoArm(); }
+  };
+  $("undoFix").onclick = () => { const s = lastSale(); if (s) startFix(s); };
+  setInterval(() => { if (!$("undoBar").hidden && !$("undoBtn").classList.contains("armed")) renderUndo(); }, 30000);
+
+  /* ---------- Numbers ---------- */
+  function renderNumbers(){
+    const salesRev = sales.reduce((s,x) => s + x.total, 0);
+    const extraRev = extras.reduce((s,x) => s + x.amount, 0);
+    const rev = salesRev + extraRev;
+    const sp = spend.reduce((s,x) => s + x.amount, 0);
+    const net = rev - sp;
+    $("plRev").textContent = money(rev);
+    $("plRev").title = money(salesRev) + " sales + " + money(extraRev) + " tips and other";
+    $("plSpend").textContent = money(sp);
+    const n = $("plNet"); n.textContent = (net > 0 ? "+" : "") + money(net); n.className = "v " + (net > 0 ? "good" : net < 0 ? "bad" : "");
+    const bar = $("beBar");
+    if (sp > 0){
+      bar.querySelector("i").style.width = Math.min(100, rev/sp*100) + "%";
+      bar.classList.toggle("done", rev >= sp);
+      $("beText").textContent = rev >= sp ? "Broke even. Everything from here is profit." : money(sp-rev) + " more to break even (" + Math.round(rev/sp*100) + "%)";
+    } else { bar.querySelector("i").style.width = "0"; $("beText").textContent = "Add your spend to see break-even."; }
+
+    const payLine = pay => {
+      const o = sales.filter(s => s.pay === pay), x = extras.filter(e => e.pay === pay);
+      const xs = x.reduce((s,e)=>s+e.amount,0);
+      return [o.reduce((s,e)=>s+e.total,0) + xs, o.length + (o.length===1?" order":" orders") + (xs ? " + " + money(xs) + " tips/other" : "")];
+    };
+    const [ct, cn] = payLine("cash"), [zt, zn] = payLine("zelle");
+    $("cashTot").textContent = money(ct); $("cashN").textContent = cn;
+    $("zelleTot").textContent = money(zt); $("zelleN").textContent = zn;
+
+    // by item: menu items first, then any sold item no longer on the menu
+    const agg = {};
+    menu.forEach(m => agg[m.id] = {name:m.name,qty:0,amt:0,unit:m.unit,stock:m.stock});
+    sales.forEach(s => (s.items||[]).forEach(i => { (agg[i.id] ||= {name:i.name,qty:0,amt:0}); agg[i.id].qty += i.qty; agg[i.id].amt += i.qty*i.price; }));
+    const maxAmt = Math.max(1, ...Object.values(agg).map(a => a.amt));
+    const bi = $("byItem"); bi.replaceChildren();
+    Object.entries(agg).forEach(([id,a]) => {
+      const b = el("div",{className:"bar"}, el("i")); b.style.setProperty("--c", colorFor(id)); b.firstChild.style.width = (a.amt/maxAmt*100)+"%";
+      bi.append(el("div",{className:"row"}, el("span",{textContent:a.name}), el("span",{className:"muted",textContent:a.qty+" sold"+(typeof a.stock === "number" ? " · " + Math.max(0, a.stock - a.qty) + " left" : "")}), el("b",{textContent:money(a.amt)}), b));
+    });
+    if (!Object.keys(agg).length) bi.append(el("span",{className:"muted",textContent:"No items yet."}));
+
+    const days = {};
+    sales.forEach(s => { const k = dayKey(s.at); (days[k] ||= {n:0,amt:0}); days[k].n++; days[k].amt += s.total; });
+    const bd = $("byDay"); bd.replaceChildren();
+    const keys = Object.keys(days).sort();
+    if (!keys.length) bd.append(el("span",{className:"muted",textContent:"No sales yet."}));
+    keys.forEach(k => bd.append(el("div",{className:"row"}, el("span",{textContent:dayName(k)}), el("span",{className:"muted",textContent:days[k].n+" orders"}), el("b",{textContent:money(days[k].amt)}))));
+  }
+
+  /* ---------- Lists ---------- */
+  function armDelete(btn, action){
+    btn.onclick = async () => {
+      if (!btn.classList.contains("armed")){ btn.classList.add("armed"); btn.textContent = "Confirm"; setTimeout(() => { btn.classList.remove("armed"); btn.textContent = "Delete"; }, 3000); return; }
+      btn.disabled = true; try { await action(); } catch(e){ failed(e,"Couldn't delete that."); btn.disabled = false; }
+    };
+  }
+
+  function renderSales(){
+    const ul = $("salesList"); ul.replaceChildren();
+    if (!sales.length){ ul.append(el("li",{className:"empty",textContent:"No sales yet. Your first order will show up here, for both of you."})); $("moreBtn").hidden = true; return; }
+    const shown = showAll ? sales : sales.slice(0, 15);
+    shown.forEach(s => {
+      const what = (s.items||[]).map(i => i.qty + "× " + i.name).join(", ");
+      const by = el("span",{className:"who"}); if (s.by) by.dataset.uid = s.by;
+      const sub = el("div",{className:"sub"}, dayName(dayKey(s.at)).split(",")[0] + " " + timeOf(s.at), by);
+      const del = el("button",{className:"del",type:"button",textContent:"Delete",disabled:!writable});
+      armDelete(del, () => db.collection("sales").doc(s.id).delete());
+      const fix = el("button",{className:"mini",type:"button",textContent:"Fix",disabled:!writable});
+      fix.setAttribute("aria-label","Fix this sale");
+      fix.onclick = () => startFix(s);
+      if (s.fixedAt) sub.append(" · fixed");
+      ul.append(el("li",{}, el("div",{className:"main"}, el("div",{textContent:what}), sub), el("span",{className:"chip"+(s.pay==="cash"?" cash":""),textContent:s.pay}), el("b",{textContent:money(s.total)}), fix, del));
+    });
+    $("moreBtn").hidden = sales.length <= 15;
+    $("moreBtn").textContent = showAll ? "Show recent only" : "Show all " + sales.length;
+    resolveNames();
+  }
+
+  async function resolveNames(){
+    if (!user || !user.profiles) return;
+    const spans = [...document.querySelectorAll(".who[data-uid]")];
+    const ids = [...new Set(spans.map(s => s.dataset.uid))];
+    if (!ids.length) return;
+    try {
+      const ps = await user.profiles(ids);
+      spans.forEach(s => { const p = ps && ps[s.dataset.uid]; const nm = p && (p.isMe ? "you" : p.name); s.textContent = nm ? " · by " + nm : ""; });
+    } catch(e){}
+  }
+
+  /* ---------- Menu editor ---------- */
+  let draft = null;
+  function openMenuEditor(){
+    draft = menu.map(m => ({...m}));
+    if (!draft.length) draft.push({id:"", name:"", unit:"", price:"", stock:""});
+    $("menuEditor").hidden = false; $("tiles").hidden = true; $("editMenuBtn").hidden = true;
+    renderMenuRows();
+  }
+  function closeMenuEditor(){ draft = null; $("menuEditor").hidden = true; $("tiles").hidden = false; $("editMenuBtn").hidden = false; }
+  function renderMenuRows(){
+    const box = $("menuRows"); box.replaceChildren();
+    box.append(el("div",{className:"erow ehead"}, el("span",{textContent:"Item"}), el("span",{className:"hs",textContent:"Size"}), el("span",{textContent:"Price"}), el("span",{textContent:"Stock"}), el("span")));
+    draft.forEach((m,i) => {
+      const name = el("input",{id:"mn"+i,value:m.name,placeholder:"Item name",required:true}); name.setAttribute("aria-label","Item name");
+      const unit = el("input",{id:"mu"+i,className:"unit",value:m.unit||"",placeholder:"Size, e.g. 1 plate"}); unit.setAttribute("aria-label","Size or portion");
+      const price = el("input",{id:"mp"+i,type:"number",inputMode:"decimal",step:"0.01",min:"0",value:m.price,placeholder:"$",required:true}); price.setAttribute("aria-label","Price");
+      const stock = el("input",{id:"ms"+i,type:"number",inputMode:"numeric",step:"1",min:"0",value:m.stock ?? "",placeholder:"Qty"}); stock.setAttribute("aria-label","Starting stock for "+(m.name||"item")+", leave blank to not track");
+      name.oninput = () => m.name = name.value; unit.oninput = () => m.unit = unit.value; price.oninput = () => m.price = price.value; stock.oninput = () => m.stock = stock.value;
+      const x = el("button",{className:"x",type:"button",textContent:"×"}); x.setAttribute("aria-label","Remove "+(m.name||"item"));
+      x.onclick = () => { draft.splice(i,1); renderMenuRows(); };
+      box.append(el("div",{className:"erow"}, name, unit, price, stock, x));
+    });
+  }
+  $("editMenuBtn").onclick = openMenuEditor;
+  $("cancelMenuBtn").onclick = closeMenuEditor;
+  $("addItemBtn").onclick = () => { draft.push({id:"", name:"", unit:"", price:"", stock:""}); renderMenuRows(); $("mn"+(draft.length-1)).focus(); };
+  $("menuEditor").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!db) return;
+    const items = draft.filter(m => String(m.name).trim()).map(m => ({
+      // keep an item's id so its sales stay grouped after a rename or price change
+      id: m.id || String(m.name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") + "-" + Math.random().toString(36).slice(2,6),
+      name: String(m.name).trim(), unit: String(m.unit||"").trim(), price: Math.round(parseFloat(m.price)*100)/100 || 0,
+      ...(String(m.stock ?? "").trim() !== "" && parseInt(m.stock,10) >= 0 ? {stock: parseInt(m.stock,10)} : {})
+    }));
+    // drop cart lines for removed items
+    Object.keys(cart).forEach(k => { if (!items.some(m => m.id === k)) delete cart[k]; });
+    try { await db.doc("settings/menu").set({items}); closeMenuEditor(); renderCart(); toast("Menu saved"); }
+    catch(err){ failed(err, "Couldn't save the menu."); }
+  });
+
+  /* ---------- Spend ---------- */
+  let editingSpend = null;
+  function renderSpend(){
+    // keep what's being typed if a live update re-renders the list mid-edit
+    const kl = editingSpend && $("sl-"+editingSpend), ka = editingSpend && $("sa-"+editingSpend);
+    const keep = kl && ka ? {label:kl.value, amount:ka.value} : null;
+    const ul = $("spendList"); ul.replaceChildren();
+    if (!spend.length){ ul.append(el("li",{className:"empty",textContent:"No spend logged yet. Add stall fee, supplies and ingredients below."})); return; }
+    spend.forEach(x => {
+      if (editingSpend === x.id){
+        const lab = el("input",{id:"sl-"+x.id,value:keep ? keep.label : x.label}); lab.setAttribute("aria-label","What you spent on");
+        const amt = el("input",{id:"sa-"+x.id,type:"number",inputMode:"decimal",step:"0.01",min:"0",value:keep ? keep.amount : x.amount}); amt.setAttribute("aria-label","Amount");
+        const save = el("button",{className:"mini",type:"button",textContent:"Save"});
+        const cancel = el("button",{className:"del",type:"button",textContent:"Cancel"});
+        save.onclick = async () => {
+          const label = lab.value.trim(), amount = parseFloat(amt.value);
+          if (!label || !(amount >= 0)) { notice("Enter a name and an amount for that spend."); return; }
+          save.disabled = true;
+          try { await db.collection("expenses").doc(x.id).update({label, amount: Math.round(amount*100)/100}); editingSpend = null; notice(""); renderSpend(); }
+          catch(err){ failed(err,"Couldn't update that spend."); save.disabled = false; }
+        };
+        cancel.onclick = () => { editingSpend = null; renderSpend(); };
+        amt.onkeydown = lab.onkeydown = e => { if (e.key === "Enter") save.click(); };
+        ul.append(el("li",{}, el("div",{className:"spedit"}, lab, amt), save, cancel));
+        return;
+      }
+      const edit = el("button",{className:"mini",type:"button",textContent:"Edit",disabled:!writable});
+      edit.onclick = () => { editingSpend = x.id; renderSpend(); const a = $("sa-"+x.id); a && a.focus(); };
+      const del = el("button",{className:"del",type:"button",textContent:"Delete",disabled:!writable});
+      armDelete(del, () => db.collection("expenses").doc(x.id).delete());
+      ul.append(el("li",{}, el("div",{className:"main"}, el("div",{textContent:x.label})), el("b",{textContent:money(x.amount)}), edit, del));
+    });
+    ul.append(el("li",{}, el("div",{className:"main"}, el("b",{textContent:"Total spend"})), el("b",{textContent:money(spend.reduce((s,x)=>s+x.amount,0))})));
+  }
+
+  /* ---------- Tips and other income ---------- */
+  const EXTRA_KINDS = ["Tip", "Donation", "Catering / pre-order", "Other"];
+  let extraKind = "Tip";
+  function renderExtraForm(){
+    const box = $("extraKinds"); box.replaceChildren();
+    EXTRA_KINDS.forEach(k => {
+      const b = el("button",{className:"kind",type:"button",textContent:k});
+      b.setAttribute("role","radio"); b.setAttribute("aria-checked", String(k === extraKind));
+      b.onclick = () => { extraKind = k; renderExtraForm(); };
+      box.append(b);
+    });
+    $("extraNote").hidden = extraKind === "Tip";
+    const q = $("extraQuick"); q.replaceChildren();
+    (extraKind === "Tip" ? [1,2,5,10] : [10,20,50]).forEach(v => {
+      const b = el("button",{className:"bill",type:"button",textContent:money(v)});
+      b.onclick = () => { $("extraAmt").value = v; };
+      q.append(b);
+    });
+    $("extraForm").querySelectorAll("button[type=submit]").forEach(b => b.disabled = !writable);
+  }
+  $("extraForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!db) return;
+    const pay = (e.submitter && e.submitter.dataset.pay) || "cash";
+    const amount = Math.round(parseFloat($("extraAmt").value)*100)/100;
+    if (!(amount > 0)) { notice("Enter an amount for the " + extraKind.toLowerCase() + "."); return; }
+    const note = extraKind === "Tip" ? "" : $("extraNote").value.trim();
+    const body = {kind: extraKind, note, amount, pay, at: Date.now()}; if (uid) body.by = uid;
+    try {
+      const ref = db.collection("extras").doc();
+      await ref.set(body);
+      $("extraAmt").value = ""; $("extraNote").value = ""; notice("");
+      toast("Added " + money(amount) + " " + extraKind.toLowerCase() + " (" + (pay === "cash" ? "cash" : "Zelle") + ")", async () => { await ref.delete(); });
+    } catch(err){ failed(err, "Couldn't add that."); }
+  });
+  function renderExtras(){
+    const ul = $("extraList"); ul.replaceChildren();
+    if (!extras.length){ ul.append(el("li",{className:"empty",textContent:"No tips or other income yet. They count toward your profit and your cash or Zelle totals."})); return; }
+    extras.forEach(x => {
+      const by = el("span",{className:"who"}); if (x.by) by.dataset.uid = x.by;
+      const sub = el("div",{className:"sub"}, dayName(dayKey(x.at)).split(",")[0] + " " + timeOf(x.at), by);
+      const del = el("button",{className:"del",type:"button",textContent:"Delete",disabled:!writable});
+      armDelete(del, () => db.collection("extras").doc(x.id).delete());
+      ul.append(el("li",{}, el("div",{className:"main"}, el("div",{textContent: x.kind + (x.note ? " · " + x.note : "")}), sub), el("span",{className:"chip extra",textContent:x.pay}), el("b",{textContent:money(x.amount)}), del));
+    });
+    const tot = extras.reduce((s,x)=>s+x.amount,0), tips = extras.filter(x => x.kind === "Tip").reduce((s,x)=>s+x.amount,0);
+    ul.append(el("li",{}, el("div",{className:"main"}, el("b",{textContent:"Total"}), el("div",{className:"sub",textContent:"Tips " + money(tips) + " · other " + money(tot - tips)})), el("b",{textContent:money(tot)})));
+    resolveNames();
+  }
+
+  /* ---------- Reset ---------- */
+  function renderReset(){
+    const n = sales.length + extras.length;
+    $("resetBtn").textContent = n ? "Clear sales and tips (" + n + ")" : "Clear sales and tips";
+    $("resetBtn").disabled = !writable || !n;
+  }
+  $("resetBtn").onclick = () => {
+    const rev = sales.reduce((s,x) => s + x.total, 0) + extras.reduce((s,x) => s + x.amount, 0);
+    $("resetMsg").textContent = "Delete " + sales.length + " sales and " + extras.length + " tips/other entries (" + money(rev) + ") from both phones? This can't be undone." + (downloads ? " Export a CSV first if you want a copy." : "");
+    $("resetIdle").hidden = true; $("resetConfirm").hidden = false;
+  };
+  $("resetNo").onclick = () => { $("resetIdle").hidden = false; $("resetConfirm").hidden = true; };
+  $("resetYes").onclick = async () => {
+    if (!db) return;
+    const btn = $("resetYes"); btn.disabled = true; $("resetNo").disabled = true;
+    const ids = [...sales.map(s => ["sales", s.id]), ...extras.map(x => ["extras", x.id])]; let done = 0;
+    try {
+      for (const [col, id] of ids){ await db.collection(col).doc(id).delete(); done++; btn.textContent = "Clearing " + done + " of " + ids.length + "…"; }
+      cart = {}; tendered = null; renderCart();
+      toast("Cleared " + done + " entries. Ready for a fresh start.");
+    } catch(e){ failed(e, "Cleared " + done + " of " + ids.length + " entries, then stopped. Tap Clear sales and tips again to finish."); }
+    finally { btn.disabled = false; $("resetNo").disabled = false; btn.textContent = "Yes, clear them"; $("resetIdle").hidden = false; $("resetConfirm").hidden = true; renderReset(); }
+  };
+
+  /* ---------- Stock ---------- */
+  let editingStock = null;
+  function renderStock(){
+    const ki = editingStock && $("stk-" + editingStock);
+    const keep = ki ? ki.value : null;
+    const ul = $("stockList"); ul.replaceChildren();
+    if (!menu.length){ ul.append(el("li",{className:"empty",textContent:"Add items to the menu first."})); return; }
+    const sold = soldById();
+    menu.forEach(m => {
+      const n = sold[m.id] || 0, has = typeof m.stock === "number";
+      if (editingStock === m.id){
+        const inp = el("input",{id:"stk-"+m.id,type:"number",inputMode:"numeric",step:"1",min:"0",value: keep ?? (has ? m.stock : ""),placeholder:"Qty"});
+        inp.setAttribute("aria-label","Total made of "+m.name+", blank to stop counting");
+        const bump = d => { const v = (parseInt(inp.value,10) || 0) + d; inp.value = Math.max(0, v); };
+        const plus10 = el("button",{className:"step",type:"button",textContent:"+10"}); plus10.onclick = () => bump(10);
+        const plus5 = el("button",{className:"step",type:"button",textContent:"+5"}); plus5.onclick = () => bump(5);
+        const minus5 = el("button",{className:"step",type:"button",textContent:"−5"}); minus5.onclick = () => bump(-5);
+        const save = el("button",{className:"mini",type:"button",textContent:"Save"});
+        const cancel = el("button",{className:"del",type:"button",textContent:"Cancel"});
+        save.onclick = async () => {
+          const raw = inp.value.trim(), v = parseInt(raw,10);
+          if (raw !== "" && !(v >= 0)) { notice("Enter a whole number, or leave it blank to stop counting."); return; }
+          save.disabled = true;
+          const items = menu.map(x => { if (x.id !== m.id) return x; const y = {...x}; if (raw === "") delete y.stock; else y.stock = v; return y; });
+          try { await db.doc("settings/menu").update({items}); editingStock = null; notice(""); toast(m.name + ": " + (raw === "" ? "not counting stock" : v + " made, " + Math.max(0, v - n) + " left")); }
+          catch(err){ failed(err, "Couldn't save the stock."); save.disabled = false; }
+        };
+        cancel.onclick = () => { editingStock = null; renderStock(); };
+        inp.onkeydown = e => { if (e.key === "Enter") save.click(); if (e.key === "Escape") cancel.click(); };
+        ul.append(el("li",{className:"stk"}, el("div",{className:"stkedit"},
+          el("span",{className:"nm",textContent:m.name + (n ? " · " + n + " sold so far" : "")}),
+          inp, minus5, plus5, plus10, el("span",{className:"acts"}, save, cancel))));
+        return;
+      }
+      const left = has ? m.stock - n : null;
+      const sub = has ? m.stock + " made · " + n + " sold" : "Not counting · " + n + " sold";
+      const leftEl = el("b",{textContent: has ? (left > 0 ? left + " left" : "Sold out") : "–"});
+      if (has && left <= 0) leftEl.style.color = "var(--bad)";
+      const edit = el("button",{className:"mini",type:"button",textContent: has ? "Edit" : "Set",disabled:!writable});
+      edit.setAttribute("aria-label",(has ? "Edit" : "Set") + " stock for " + m.name);
+      edit.onclick = () => { editingStock = m.id; renderStock(); const i = $("stk-"+m.id); if (i){ i.focus(); i.select(); } };
+      ul.append(el("li",{className:"stk"}, el("div",{className:"main"}, el("div",{textContent:m.name}), el("div",{className:"sub",textContent:sub})), leftEl, edit));
+    });
+    ul.append(el("li",{}, el("div",{className:"sub",textContent:"Stock is the total you've made for the weekend. Made more? Tap Edit and add to it. Leave it blank to stop counting an item."})));
+  }
+
+  function renderAll(){ renderUndo(); renderTiles(); renderStock(); renderNumbers(); renderSales(); renderExtraForm(); renderExtras(); renderSpend(); renderReset(); renderExport(); }
+
+  /* ---------- Events ---------- */
+  $("payCash").onclick = () => record("cash");
+  $("payZelle").onclick = () => record("zelle");
+  $("clearCart").onclick = () => { if (fixing) { cancelFix(); return; } cart = {}; tendered = null; $("tendered").value = ""; renderCart(); };
+  $("moreBtn").onclick = () => { showAll = !showAll; renderSales(); };
+  $("spendForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!db) return;
+    const label = $("spendLabel").value.trim(), amount = parseFloat($("spendAmt").value);
+    if (!label || !(amount >= 0)) return;
+    try { await db.collection("expenses").doc().set({label, amount: Math.round(amount*100)/100, at: Date.now()}); $("spendLabel").value = ""; $("spendAmt").value = ""; }
+    catch(err){ failed(err, "Couldn't add that spend."); }
+  });
+  /* ---------- Export ---------- */
+  const KINDS = [
+    {id:"summary", name:"Summary", desc:"Profit/loss, cash vs Zelle, by item, by day, spend"},
+    {id:"items", name:"Item by item", desc:"One row per item sold, best for spreadsheets"},
+    {id:"orders", name:"Orders", desc:"One row per order, with who recorded it"},
+    {id:"extras", name:"Tips and other", desc:"Tips, donations and other income"},
+    {id:"spend", name:"Spend", desc:"Everything you spent"},
+  ];
+  let expKind = "summary";
+  function renderExport(){
+    const box = $("expKinds"); box.replaceChildren();
+    KINDS.forEach(k => {
+      const b = el("button",{className:"opt",type:"button"}, el("b",{textContent:k.name}), el("span",{textContent:k.desc}));
+      b.setAttribute("role","radio"); b.setAttribute("aria-checked", String(k.id === expKind));
+      b.onclick = () => { expKind = k.id; $("expText").hidden = true; renderExport(); };
+      box.append(b);
+    });
+    const sel = $("expDay"), cur = sel.value;
+    const days = [...new Set(sales.map(x => dayKey(x.at)))].sort();
+    sel.replaceChildren(el("option",{value:"all",textContent:"All days"}), ...days.map(d => el("option",{value:d,textContent:dayName(d)})));
+    sel.value = days.includes(cur) ? cur : "all";
+    sel.disabled = expKind === "spend";
+    const n = expSales().length;
+    $("expInfo").textContent = expKind === "spend" ? spend.length + " spend lines." : expKind === "extras" ? expExtras().length + " tips/other entries" + ($("expDay").value === "all" ? " across all days." : " on " + dayName($("expDay").value) + ".") : n + (n === 1 ? " order" : " orders") + (sel.value === "all" ? " across all days." : " on " + dayName(sel.value) + ".") + (expKind === "summary" && sel.value !== "all" ? " Spend is the full weekend total." : "");
+    $("expSave").hidden = !downloads;
+  }
+  $("expDay").onchange = () => { $("expText").hidden = true; renderExport(); };
+  function expExtras(){ const d = $("expDay").value; return [...extras].reverse().filter(x => d === "all" || dayKey(x.at) === d); }
+  function expSales(){ const d = $("expDay").value; return [...sales].reverse().filter(x => d === "all" || dayKey(x.at) === d); }
+
+  async function buildCsv(){
+    const list = expSales(), rows = [];
+    const sum = a => a.reduce((t,x) => t + x, 0);
+    if (expKind === "items"){
+      rows.push(["Date","Time","Item","Size","Qty","Price","Line total","Payment","Order ID"]);
+      list.forEach(x => (x.items||[]).forEach(i => { const m = menu.find(mm => mm.id === i.id); rows.push([dayKey(x.at), timeOf(x.at), i.name, m ? m.unit||"" : "", i.qty, i.price, i.qty*i.price, x.pay, x.id]); }));
+    } else if (expKind === "orders"){
+      let names = {};
+      try { const ids = [...new Set(list.map(x => x.by).filter(Boolean))]; if (user && user.profiles && ids.length) names = await user.profiles(ids) || {}; } catch(e){}
+      rows.push(["Date","Time","Items","Item count","Total","Payment","Recorded by"]);
+      list.forEach(x => rows.push([dayKey(x.at), timeOf(x.at), (x.items||[]).map(i => i.qty + "x " + i.name).join("; "), sum((x.items||[]).map(i => i.qty)), x.total, x.pay, (x.by && names[x.by] && names[x.by].name) || ""]));
+    } else if (expKind === "extras"){
+      rows.push(["Date","Time","Type","Note","Amount","Payment"]);
+      const xl = expExtras();
+      xl.forEach(x => rows.push([dayKey(x.at), timeOf(x.at), x.kind, x.note || "", x.amount, x.pay]));
+      rows.push(["Total","","","",sum(xl.map(x => x.amount))]);
+    } else if (expKind === "spend"){
+      rows.push(["Spend","Amount"]);
+      spend.forEach(x => rows.push([x.label, x.amount]));
+      rows.push(["Total", sum(spend.map(x => x.amount))]);
+    } else {
+      const xl = expExtras();
+      const rev = sum(list.map(x => x.total)), xrev = sum(xl.map(x => x.amount)), sp = sum(spend.map(x => x.amount));
+      const cash = list.filter(x => x.pay === "cash"), zel = list.filter(x => x.pay === "zelle");
+      const xcash = sum(xl.filter(x => x.pay === "cash").map(x => x.amount)), xzel = sum(xl.filter(x => x.pay === "zelle").map(x => x.amount));
+      rows.push(["Snack stall summary", $("expDay").value === "all" ? "All days" : dayName($("expDay").value)]);
+      rows.push([]);
+      rows.push(["Total sales", rev]); rows.push(["Tips and other income", xrev]); rows.push(["Total income", rev + xrev]);
+      rows.push(["Total spend", sp]); rows.push(["Profit/loss", rev + xrev - sp]);
+      rows.push(["Orders", list.length]);
+      rows.push([]);
+      rows.push(["Payment","Orders","Sales","Tips and other","Total"]);
+      rows.push(["Cash", cash.length, sum(cash.map(x => x.total)), xcash, sum(cash.map(x => x.total)) + xcash]);
+      rows.push(["Zelle", zel.length, sum(zel.map(x => x.total)), xzel, sum(zel.map(x => x.total)) + xzel]);
+      rows.push([]);
+      rows.push(["Tips and other","Entries","Amount"]);
+      EXTRA_KINDS.forEach(k => { const a = xl.filter(x => x.kind === k); if (a.length) rows.push([k, a.length, sum(a.map(x => x.amount))]); });
+      rows.push([]);
+      rows.push(["Item","Sold","Revenue","Starting stock","Left"]);
+      const agg = {}; menu.forEach(m => agg[m.id] = {name:m.name, qty:0, amt:0, stock:m.stock});
+      list.forEach(x => (x.items||[]).forEach(i => { (agg[i.id] ||= {name:i.name, qty:0, amt:0}); agg[i.id].qty += i.qty; agg[i.id].amt += i.qty*i.price; }));
+      const allSold = soldById();
+      Object.entries(agg).forEach(([id,a]) => rows.push([a.name, a.qty, a.amt, typeof a.stock === "number" ? a.stock : "", typeof a.stock === "number" ? a.stock - (allSold[id]||0) : ""]));
+      rows.push([]);
+      rows.push(["Day","Orders","Sales"]);
+      const days = {}; list.forEach(x => { const k = dayKey(x.at); (days[k] ||= {n:0, amt:0}); days[k].n++; days[k].amt += x.total; });
+      Object.keys(days).sort().forEach(k => rows.push([k, days[k].n, days[k].amt]));
+      rows.push([]);
+      rows.push(["Spend","Amount"]); spend.forEach(x => rows.push([x.label, x.amount]));
+    }
+    const q = v => { const t = String(v ?? ""); return /[",\n]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t; };
+    return rows.map(r => r.map(q).join(",")).join("\r\n");
+  }
+  function expFilename(){ const d = $("expDay").value; return "stall-" + expKind + (expKind !== "spend" && d !== "all" ? "-" + d : "") + ".csv"; }
+
+  $("expSave").onclick = async () => {
+    if (!downloads) return;
+    try { const r = await downloads.save({filename: expFilename(), data: await buildCsv()}); if (r && r.status) toast("Saved " + expFilename()); }
+    catch(e){ if (e && e.code !== "declined") notice("Couldn't download the file. Use Copy as CSV instead."); }
+  };
+  $("expCopy").onclick = async () => {
+    const text = await buildCsv(), ta = $("expText");
+    ta.value = text;
+    try { await navigator.clipboard.writeText(text); toast("Copied. Paste into Google Sheets, Excel or Notes."); ta.hidden = true; }
+    catch(e){ ta.hidden = false; ta.focus(); ta.select(); notice("Your browser blocked copying. The CSV is selected below; copy it by hand."); }
+  };
+
+  /* ---------- Boot ---------- */
+  async function boot(){
+    if (!window.claude || !window.claude.use){ setStatus("Offline preview"); notice("Open this page on claude.ai to log sales."); renderAll(); return; }
+    [db, user, downloads] = await Promise.all([claude.use("db"), claude.use("user"), claude.use("downloads")]);
+    if (!db){ setStatus("Not connected"); notice("Sign in to claude.ai to log sales."); writable = false; renderAll(); return; }
+    try { uid = user ? await user.id() : null; } catch(e){}
+    try { if (user && user.can){ const c = await user.can("data.write"); if (c === false){ writable = false; notice("You can view this ledger but not add to it. Ask the owner to share it with you as an Editor."); } } } catch(e){}
+    setStatus("Live · syncs between phones");
+    const onErr = e => { setStatus("Connection lost · reload the page"); };
+    db.doc("settings/menu").onSnapshot(s => { menu = (s.exists && s.data().items) || []; renderTiles(); renderStock(); renderNumbers(); }, onErr);
+    db.collection("sales").orderBy("at","desc").limit(1000).onSnapshot(s => { sales = s.docs.map(d => ({id:d.id, ...d.data()})); if (fixing && !sales.some(x => x.id === fixing.id)) { fixing = null; renderCart(); }
+      renderUndo(); renderTiles(); renderStock(); renderNumbers(); renderSales(); renderReset(); renderExport(); }, onErr);
+    db.collection("extras").orderBy("at","desc").limit(1000).onSnapshot(s => { extras = s.docs.map(d => ({id:d.id, ...d.data()})); renderNumbers(); renderExtraForm(); renderExtras(); renderReset(); renderExport(); }, onErr);
+    db.collection("expenses").orderBy("at","asc").onSnapshot(s => { spend = s.docs.map(d => ({id:d.id, ...d.data()})); renderNumbers(); renderSpend(); renderExport(); }, onErr);
+  }
+  renderAll();
+  boot();
+})();
+</script>

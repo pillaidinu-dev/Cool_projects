@@ -26,6 +26,7 @@ test('heat spike: every crew gets at least the floor plan and every worker is to
   // Worker messages are in their own language.
   assert.match(lastTo('c1-w1').text, /गर्मी/);
   assert.match(lastTo('c2-w2').text, /حرارة/);
+  assert.match(lastTo('c3-w2').text, /வெப்ப/); // Tamil
 });
 
 test('cooling down relaxes the plan and tells workers', async () => {

@@ -13,7 +13,7 @@ An AI agent that protects outdoor workers from heat stress. Entry prototype for 
 2. **Reasons.** When something changes (risk level moves, a worker misses a check-in, a worker
    says they feel unwell or sends a message), Claude inspects the site and decides what to do.
 3. **Acts.** Sets each crew's water and work/rest schedule, sends alerts to workers in their
-   own language (Hindi, Urdu, Malayalam, Bengali, Tagalog, Arabic, English) with voice
+   own language (Hindi, Urdu, Malayalam, Tamil, Bengali, Tagalog, Arabic, English) with voice
    playback, asks workers to check in ("reply 1 if OK, 2 if unwell"), and escalates to the
    supervisor.
 4. **Guarantees a safety floor.** A deterministic rules engine runs every tick. Whatever the
@@ -142,7 +142,7 @@ engine still acts.
 ```
 src/heat.js      WBGT estimate (Stull wet-bulb + globe temp), risk levels, floor plans, midday rule
 src/weather.js   Open-Meteo, a simulated Dubai profile as fallback, demo scenarios
-src/i18n.js      Worker message templates in 7 languages
+src/i18n.js      Worker message templates in 8 languages
 src/store.js     In-memory site state, outbox, supervisor alerts
 src/claude.js    Shared Claude tool-use loop (with server-side refusal fallback)
 src/agent.js     Live agent tools: get_site_status, set_crew_plan, send_worker_message, escalate_to_supervisor

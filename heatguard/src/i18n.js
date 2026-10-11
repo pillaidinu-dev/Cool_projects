@@ -11,6 +11,7 @@ export const LANGUAGES = {
   ml: { name: 'മലയാളം', voice: 'ml-IN' },
   bn: { name: 'বাংলা', voice: 'bn-BD' },
   tl: { name: 'Tagalog', voice: 'fil-PH' },
+  ta: { name: 'தமிழ்', voice: 'ta-IN' },
 };
 
 // Templates the live agent may choose. (shift_tomorrow is sent by the planner with times.)
@@ -107,6 +108,19 @@ const T = {
     first_aid_coming: 'Paparating na ang tulong. Itigil ang trabaho, umupo sa lilim, at uminom ng tubig nang dahan-dahan. Naabisuhan na ang iyong supervisor.',
     take_break: 'HeatGuard: Magpahinga nang {rest} minuto sa lilim ngayon at uminom ng tubig.',
     hydrate: 'HeatGuard: Uminom ng isang tasang tubig ngayon.',
+  },
+  ta: {
+    levels: ['இயல்பு', 'எச்சரிக்கை', 'அதிகம்', 'ஆபத்து', 'மிகக் கடுமை'],
+    shift_tomorrow: 'HeatGuard: நாளை உங்கள் குழு {start} மணிக்கு வேலையைத் தொடங்கி {end} மணிக்குள் முடிக்கும். கனமான வேலை குளிர்ச்சியான நேரத்தில் திட்டமிடப்பட்டுள்ளது. வருவதற்கு முன் தண்ணீர் குடியுங்கள்.',
+    risk_update: 'HeatGuard: வெப்ப அபாயம் இப்போது {levelName}. ஒவ்வொரு {water} நிமிடத்திற்கும் தண்ணீர் குடியுங்கள். {work} நிமிடம் வேலை செய்து, பிறகு {rest} நிமிடம் நிழலில் ஓய்வெடுங்கள்.',
+    risk_normal: 'HeatGuard: வெப்ப அபாயம் இயல்பாக உள்ளது. ஒவ்வொரு {water} நிமிடத்திற்கும் தண்ணீர் குடித்துக்கொண்டே இருங்கள்.',
+    stop_work: 'HeatGuard: மிகக் கடுமையான வெப்பம். கனமான வெளிப்புற வேலையை இப்போதே நிறுத்துங்கள். நிழலுக்கோ ஓய்வு இடத்திற்கோ சென்று தண்ணீர் குடியுங்கள்.',
+    midday_break: 'HeatGuard: மதிய ஓய்வு. மாலை 3:00 மணி வரை வெளிப்புற வேலை நிறுத்தப்படுகிறது. நிழலில் ஓய்வெடுத்து தண்ணீர் குடியுங்கள்.',
+    checkin: 'HeatGuard சரிபார்ப்பு: நீங்கள் நலமாக இருக்கிறீர்களா? நலமாக இருந்தால் 1, உடல்நிலை சரியில்லை என்றால் 2 என பதில் அனுப்புங்கள்.',
+    checkin_thanks: 'நன்றி. பாதுகாப்பாக இருங்கள், தண்ணீர் குடித்துக்கொண்டே இருங்கள்.',
+    first_aid_coming: 'உதவி வந்துகொண்டிருக்கிறது. வேலையை நிறுத்தி, நிழலில் அமர்ந்து, மெதுவாக தண்ணீர் குடியுங்கள். உங்கள் மேற்பார்வையாளருக்கு தெரிவிக்கப்பட்டுள்ளது.',
+    take_break: 'HeatGuard: இப்போதே நிழலில் {rest} நிமிடம் ஓய்வெடுத்து தண்ணீர் குடியுங்கள்.',
+    hydrate: 'HeatGuard: இப்போதே ஒரு கப் தண்ணீர் குடியுங்கள்.',
   },
 };
 

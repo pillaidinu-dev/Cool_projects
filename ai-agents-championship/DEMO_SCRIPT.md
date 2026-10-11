@@ -81,7 +81,7 @@ record with the API key on.
 
 **Voice-over:**
 > "On site, HeatGuard works out the heat stress for every crew. The moment risk rises it tightens
-> each crew's water and rest schedule, and tells every worker — in Hindi, Urdu, Malayalam, Bengali,
+> each crew's water and rest schedule, and tells every worker — in Hindi, Urdu, Malayalam, Tamil, Bengali,
 > Tagalog or Arabic, with a voice note for anyone who doesn't read."
 
 ### Scene 5 — A worker feels unwell (1:20–1:45)

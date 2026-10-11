@@ -25,7 +25,7 @@ export function reset() {
       crew('c2', 'Facade crew', 'moderate', [
         ['Joel Santos', 'tl'], ['Ahmed Saleh', 'ar'], ['Vijay Menon', 'ml'],
       ]),
-      crew('c3', 'Landscaping crew', 'moderate', [['Mohammed Hossain', 'bn'], ['Arjun Singh', 'hi']]),
+      crew('c3', 'Landscaping crew', 'moderate', [['Mohammed Hossain', 'bn'], ['Karthik Murugan', 'ta']]),
       crew('c4', 'Security team', 'light', [['Bilal Khan', 'ur'], ['Mark Reyes', 'tl']]),
     ],
     events: [],

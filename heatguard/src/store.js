@@ -3,13 +3,17 @@
 import { render, LANGUAGES } from './i18n.js';
 import { floorPlan } from './heat.js';
 import { demoTasks } from './planner.js';
+import {
+  resetRecords, recordRiskNotice, recordCheckinSent, recordCheckinEscalated, recordIncident, updateIncident,
+} from './records.js';
 
-const MAX_LOG = 300;
+const MAX_LOG = 2000; // the API returns only the latest entries; the report uses the full trail
 let nextId = 1;
 
 export const state = {};
 
 export function reset() {
+  resetRecords();
   Object.assign(state, {
     site: { id: 'site-1', name: 'Demo Site — Al Quoz Block 4', lat: 25.14, lon: 55.23, supervisor: 'Site Supervisor' },
     settings: { scenario: 'afternoon', timeScale: 20 }, // demo default: 1 real second = 20 site seconds
@@ -57,45 +61,58 @@ export function log(type, text, source = 'system') {
   state.events.length = Math.min(state.events.length, MAX_LOG);
 }
 
+function pushMessage(msg) {
+  state.messages.unshift(msg);
+  state.messages.length = Math.min(state.messages.length, MAX_LOG);
+  return msg;
+}
+
 /** Send a templated message to a worker. `params` fill extra placeholders (e.g. shift times). */
 export function sendToWorker(worker, template, source, params = {}) {
   const crewPlan = findCrew(worker.crewId).plan;
   const text = render(template, worker.lang, { ...crewPlan, ...params });
-  const msg = {
+  const msg = pushMessage({
     id: nextId++, t: Date.now(), to: worker.id, toName: worker.name,
     lang: worker.lang, voice: LANGUAGES[worker.lang].voice, template, text, source, direction: 'out',
-  };
-  state.messages.unshift(msg);
-  state.messages.length = Math.min(state.messages.length, MAX_LOG);
-  if (template === 'risk_update') worker.notifiedLevel = crewPlan.level;
+  });
+  if (template === 'risk_update') {
+    worker.notifiedLevel = crewPlan.level;
+    recordRiskNotice(worker.id, worker.crewId, findCrew(worker.crewId).workers.length, state.settings.timeScale);
+  }
   if (template === 'checkin') {
-    worker.pending = { sentAt: Date.now(), escalated: false };
+    worker.pending = { sentAt: Date.now(), escalated: false, recId: recordCheckinSent(worker.id, worker.crewId) };
     worker.status = 'awaiting';
   }
-  if (template === 'first_aid_coming' && worker.unwell) worker.unwell.firstAidSent = true;
+  if (template === 'first_aid_coming' && worker.unwell) {
+    worker.unwell.firstAidSent = true;
+    updateIncident(worker.unwell.recId, 'firstAidAt', state.settings.timeScale);
+  }
   return msg;
 }
 
 export function recordReply(worker, text) {
-  state.messages.unshift({
-    id: nextId++, t: Date.now(), from: worker.id, fromName: worker.name, lang: worker.lang, text, direction: 'in',
-  });
+  pushMessage({ id: nextId++, t: Date.now(), from: worker.id, fromName: worker.name, lang: worker.lang, text, direction: 'in' });
 }
 
-export function markUnwell(w) {
+export function markUnwell(w, via = 'reported unwell') {
   w.status = 'unwell';
   w.pending = null;
-  w.unwell = { at: Date.now(), escalated: false, firstAidSent: false };
+  w.unwell = { at: Date.now(), escalated: false, firstAidSent: false, recId: recordIncident(w.id, w.crewId, via) };
 }
 
 export function escalate(worker, severity, message, source) {
-  const msg = {
+  const msg = pushMessage({
     id: nextId++, t: Date.now(), to: 'supervisor', about: worker?.id, aboutName: worker?.name,
     severity, text: message, source, direction: 'out',
-  };
-  state.messages.unshift(msg);
-  if (worker?.pending && worker.status === 'overdue') worker.pending.escalated = true;
-  if (worker?.unwell) worker.unwell.escalated = true;
+  });
+  if (worker?.pending && worker.status === 'overdue') {
+    worker.pending.escalated = true;
+    recordCheckinEscalated(worker.pending.recId);
+  }
+  if (worker?.unwell) {
+    worker.unwell.escalated = true;
+    updateIncident(worker.unwell.recId, 'escalatedAt', state.settings.timeScale);
+  }
   log('escalation', `[${severity}] ${worker ? worker.name + ': ' : ''}${message}`, source);
   return msg;
 }

@@ -55,6 +55,7 @@ p { margin: 0; }
   padding: 6px 12px; border-radius: 8px; cursor: pointer; font: inherit;
 }
 .btn:hover { border-color: var(--accent); }
+a.btn { text-decoration: none; display: inline-block; }
 .btn.ghost { background: transparent; }
 .btn.ok { background: var(--ok-bg); }
 .btn.bad { background: var(--bad-bg); }

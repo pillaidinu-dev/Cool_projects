@@ -9,6 +9,9 @@ import { state, allWorkers, findWorker, sendToWorker, recordReply, escalate, mar
 import { estimateWbgt, riskLevel, floorPlan, isAtLeastAsStrict, isMiddayBreak, LEVELS } from './heat.js';
 import { getConditions } from './weather.js';
 import { claudeAvailable, runClaude } from './agent.js';
+import {
+  recordSample, recordRiskChange, recordCheckinAnswered, recordCheckinMissed, recordPlan, recordMiddayNotice, updateIncident,
+} from './records.js';
 
 const CHECKIN_TIMEOUT_MIN = 10; // site minutes before a missing reply is escalated
 const AGENT_GRACE_MS = 20_000; // floor waits this long for a running agent before acting itself
@@ -31,6 +34,7 @@ export async function tick() {
     const level = riskLevel(crew.wbgt, crew.intensity);
     if (level !== crew.assessedLevel || crew.plan.reason === 'initial') {
       queueEvent({ type: 'risk_change', crew_id: crew.id, crew: crew.name, from: LEVELS[crew.assessedLevel], to: LEVELS[level], wbgt_c: crew.wbgt });
+      recordRiskChange(crew.id, crew.assessedLevel, level);
       crew.assessedLevel = level;
       if (crew.plan.reason === 'initial') crew.plan.reason = 'awaiting first assessment';
     }
@@ -40,6 +44,7 @@ export async function tick() {
   for (const w of allWorkers()) {
     if (w.status === 'awaiting' && now - w.pending.sentAt > minutes(CHECKIN_TIMEOUT_MIN)) {
       w.status = 'overdue';
+      recordCheckinMissed(w.pending.recId);
       queueEvent({ type: 'missed_checkin', worker_id: w.id, worker: w.name, minutes_waiting: CHECKIN_TIMEOUT_MIN });
     }
   }
@@ -61,6 +66,13 @@ export async function tick() {
 
   // 4. Routine check-ins.
   sendDueCheckins(now);
+
+  // 5. Evidence for the compliance report.
+  recordSample({
+    t: Date.now(), scale: state.settings.timeScale, midday: isMiddayBreak(),
+    tempC: c.tempC, rh: c.rh, solarWm2: c.solarWm2, windMs: c.windMs, source: c.source,
+    crews: state.crews.map((cr) => ({ id: cr.id, wbgt: cr.wbgt, level: cr.assessedLevel, planLevel: cr.plan.level })),
+  });
 }
 
 async function handleEvents(events) {
@@ -100,6 +112,7 @@ export function applySafetyFloor(handled, events = []) {
     if (needsFloor || unhandledChange) {
       crew.plan = { ...floorPlan(crew.assessedLevel), source: 'rules', reason: needsFloor ? 'safety floor' : 'standard plan' };
       const p = crew.plan;
+      recordPlan(crew.id, p);
       log('plan', `${crew.name}: ${LEVELS[p.level]} — water every ${p.water} min, work ${p.work}/rest ${p.rest}.`, 'rules');
     }
     const stale = crew.workers.filter((w) => w.notifiedLevel !== crew.plan.level);
@@ -113,6 +126,7 @@ export function applySafetyFloor(handled, events = []) {
   if (isMiddayBreak() && state.middayNotifiedOn !== today) {
     state.middayNotifiedOn = today;
     allWorkers().forEach((w) => sendToWorker(w, 'midday_break', 'rules'));
+    recordMiddayNotice(allWorkers().length);
     log('alert', 'Midday break (12:30–15:00): outdoor work paused for all crews.', 'rules');
   }
 
@@ -149,6 +163,7 @@ export async function handleReply(workerId, raw) {
   if (text === '1') {
     const wasOverdue = w.status === 'overdue';
     if (w.status === 'awaiting' || wasOverdue) {
+      recordCheckinAnswered(w.pending.recId, state.settings.timeScale);
       w.status = 'ok';
       w.pending = null;
       w.lastCheckinAt = Date.now();
@@ -159,7 +174,7 @@ export async function handleReply(workerId, raw) {
     return;
   }
   if (text === '2') {
-    markUnwell(w);
+    markUnwell(w, 'replied "2" (feeling unwell)');
     queueEvent({ type: 'worker_unwell', worker_id: w.id, worker: w.name, reply: text });
   } else if (claudeAvailable()) {
     queueEvent({ type: 'worker_message', worker_id: w.id, worker: w.name, language: w.lang, status: w.status, message: text });
@@ -174,6 +189,7 @@ export async function handleReply(workerId, raw) {
 export function resolveWorker(workerId) {
   const w = findWorker(workerId);
   if (!w) throw new Error('Unknown worker');
+  if (w.unwell) updateIncident(w.unwell.recId, 'resolvedAt', state.settings.timeScale);
   w.status = 'ok';
   w.pending = null;
   w.unwell = null;

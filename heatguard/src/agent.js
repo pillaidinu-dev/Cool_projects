@@ -8,6 +8,7 @@ import { claudeAvailable, runToolLoop } from './claude.js';
 import { state, findCrew, findWorker, sendToWorker, escalate, markUnwell, log } from './store.js';
 import { floorPlan, isAtLeastAsStrict, isMiddayBreak, LEVELS } from './heat.js';
 import { TEMPLATES } from './i18n.js';
+import { recordPlan } from './records.js';
 
 export { claudeAvailable };
 
@@ -120,6 +121,7 @@ export function runTool(name, input, handled) {
         throw new Error(`Plan is less strict than the floor for level ${crew.assessedLevel}: ${JSON.stringify(floorPlan(crew.assessedLevel))}`);
       }
       crew.plan = { ...plan, source: 'claude', reason: input.reason };
+      recordPlan(crew.id, crew.plan);
       handled.crews.add(crew.id);
       log('plan', `${crew.name}: ${LEVELS[plan.level]} — water every ${plan.water} min, work ${plan.work}/rest ${plan.rest}. ${input.reason}`, 'claude');
       return { ok: true, plan: crew.plan };
@@ -140,7 +142,7 @@ export function runTool(name, input, handled) {
       if (input.worker_id && !w) throw new Error(`No worker ${input.worker_id}`);
       // A critical alert about a worker means possible heat illness: track them as unwell so
       // the dashboard shows it and the safety floor makes sure first-aid guidance goes out.
-      if (w && input.severity === 'critical' && !w.unwell) markUnwell(w);
+      if (w && input.severity === 'critical' && !w.unwell) markUnwell(w, `agent: ${input.message}`);
       escalate(w, input.severity, input.message, 'claude');
       return { ok: true };
     }

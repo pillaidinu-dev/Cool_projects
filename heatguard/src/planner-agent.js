@@ -9,6 +9,7 @@
 
 import { state, findCrew, allWorkers, sendToWorker, log } from './store.js';
 import { claudeAvailable, runToolLoop } from './claude.js';
+import { recordPublished } from './records.js';
 import { getHourlyForecast, FORECASTS } from './weather.js';
 import { LEVELS } from './heat.js';
 import {
@@ -236,6 +237,7 @@ export function publishPlan() {
     }
   }
   r.published = true;
+  recordPublished(r.date, sent);
   log('alert', `Tomorrow's schedule sent to ${sent} workers in their own languages.`, 'rules');
   return sent;
 }

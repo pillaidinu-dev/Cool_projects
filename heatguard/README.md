@@ -53,6 +53,23 @@ The **Plan tomorrow** tab schedules tomorrow's work around tomorrow's heat.
 - **Free-text understanding.** A worker can reply "sir head is spinning" or reply in Hindi;
   Claude reads it and escalates as critical. Without the agent, free text goes to a human.
 
+### Daily compliance report
+
+**Compliance report** (top bar, or `/report`) produces a printable, signable report of the
+shift, built from evidence recorded as the system runs. Use the browser's **Print / Save as
+PDF**; the raw data is at `/api/report`.
+
+- **Status:** Compliant / Attention needed / Non-compliant
+- **Checks, each with its evidence:** heat assessed continuously; workers told about every
+  risk change within 5 min; plans never below the safety floor; every missed check-in
+  escalated; unwell workers escalated within 2 min with first-aid guidance; incidents closed
+  by the supervisor; UAE midday break observed; instructions in each worker's language;
+  tomorrow's schedule shared
+- Heat exposure timeline per crew, incident and missed check-in timelines, per-worker table,
+  the full audit trail, and signature lines for the supervisor and HSE officer
+
+![Compliance report](docs/report.png)
+
 ## Run it
 
 ```bash
@@ -93,6 +110,8 @@ engine still acts.
    the usual 07:00 plan (work stopped for hours, tasks unfinished) with the HeatGuard plan
    (concrete pour moved to 03:00, rebar to the evening, everything finished). Press
    **Send schedule to crews** and open a worker's phone on the Live tab.
+7. Click **Compliance report** to show the day's evidence: every check passed, the incident
+   timeline, and signature lines, ready to print as a PDF.
 
 ## How it's built
 
@@ -105,13 +124,15 @@ src/claude.js    Shared Claude tool-use loop (with server-side refusal fallback)
 src/agent.js     Live agent tools: get_site_status, set_crew_plan, send_worker_message, escalate_to_supervisor
 src/planner.js   Shift planning: heat per 15-min slot, plan validation, usual plan, rules planner
 src/planner-agent.js  Planner agent tools: get_planning_context, evaluate_plan, submit_plan
+src/records.js   Evidence recorder (heat samples, risk notices, check-ins, incidents, plans)
+src/report.js    Daily compliance report: checks, metrics, printable HTML
 src/monitor.js   Tick loop: perceive → detect events → Claude → safety floor → routine check-ins
 src/server.js    Express API + static dashboard
 public/          Supervisor dashboard, worker phone simulator, planner view (no build step)
 ```
 
 ```bash
-npm test   # heat maths, translations, safety floor, and planner validation
+npm test   # heat maths, translations, safety floor, planner validation, compliance report
 ```
 
 ## Limits (prototype)

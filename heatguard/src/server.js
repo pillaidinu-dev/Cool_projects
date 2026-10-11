@@ -9,6 +9,7 @@ import { LEVELS, isMiddayBreak } from './heat.js';
 import { LANGUAGES } from './i18n.js';
 import { planTomorrow, publishPlan } from './planner-agent.js';
 import { FORECASTS } from './weather.js';
+import { buildReport, renderReportHtml } from './report.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4200;
@@ -93,6 +94,9 @@ app.post('/api/planner/publish', (_req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
+
+app.get('/api/report', (_req, res) => res.json(buildReport()));
+app.get('/report', (_req, res) => res.type('html').send(renderReportHtml(buildReport())));
 
 app.post('/api/reset', (_req, res) => {
   reset();

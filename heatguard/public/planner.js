@@ -120,11 +120,13 @@
     </div>`;
   }
 
-  // Tabs
+  // Tabs: each [data-tab] button shows #view-<tab> and hides the others.
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
-    document.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
-    $('#view-live').hidden = b.dataset.tab !== 'live';
-    $('#view-plan').hidden = b.dataset.tab !== 'plan';
+    document.querySelectorAll('[data-tab]').forEach((x) => {
+      x.setAttribute('aria-selected', String(x === b));
+      $(`#view-${x.dataset.tab}`).hidden = x !== b;
+    });
+    document.dispatchEvent(new CustomEvent('tabchange', { detail: b.dataset.tab }));
     if (b.dataset.tab === 'plan') load();
   }));
 

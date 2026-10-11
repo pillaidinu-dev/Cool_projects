@@ -23,6 +23,27 @@ An AI agent that protects outdoor workers from heat stress. Entry prototype for 
 
 It also follows the UAE midday break (no outdoor work 12:30–15:00, 15 June – 15 September).
 
+### Command centre (multi-site)
+
+The **Command centre** tab (the default view) shows every site on one map:
+
+- Portfolio totals: workers on site, workers in Danger-level heat now, open incidents,
+  check-in response rate, sites compliant, worst risk
+- A map of the UAE with one pin per site, coloured by its worst heat risk, sized by workforce,
+  with a pulsing ring when an incident is open
+- A league table of sites sorted by risk, a drill-down panel per site (conditions, crews, risk),
+  and one alert feed across all sites
+- **Mixed-use Block 4 (Al Quoz)** is the live, interactive site; **Open live site** jumps
+  straight to it. The other seven sites (Dubai South, Dubai Creek, Jebel Ali, Abu Dhabi,
+  Sharjah, Al Ain, Ras Al Khaimah) compute their heat risk with the same model from their own
+  location and microclimate, while their check-ins and incidents are **simulated demo data**
+  and labelled as such. A pilot would run the full engine per site.
+- The weather buttons in the top bar apply to the whole portfolio, so **Heat spike** shows
+  every site react at once. Coastal sites often come out *worse* than hotter inland ones,
+  because humidity drives WBGT. That's a good talking point.
+
+![Command centre](docs/command-centre.png)
+
 ### Planner agent: "Plan tomorrow"
 
 The **Plan tomorrow** tab schedules tomorrow's work around tomorrow's heat.
@@ -98,7 +119,10 @@ engine still acts.
 
 ## Demo script (about 3 minutes)
 
-1. Start on **Cool morning**. Everyone is Normal/Caution. Open a worker's phone on the right.
+0. Open on the **Command centre**: 8 sites and 189 workers on one map. Click **Heat spike** and
+   watch the whole portfolio turn red and purple. Click the Al Quoz row, then **Open live site**.
+1. On the live site, switch to **Cool morning**. Everyone is Normal/Caution. Open a worker's
+   phone on the right.
 2. Click **Heat spike**. Crews jump to Danger/Extreme. Workers get the new schedule in their
    language; tick "Read new messages aloud" to hear it.
 3. At **20× demo** speed, check-ins arrive about every 45 seconds. Reply **1** for some workers
@@ -126,13 +150,14 @@ src/planner.js   Shift planning: heat per 15-min slot, plan validation, usual pl
 src/planner-agent.js  Planner agent tools: get_planning_context, evaluate_plan, submit_plan
 src/records.js   Evidence recorder (heat samples, risk notices, check-ins, incidents, plans)
 src/report.js    Daily compliance report: checks, metrics, printable HTML
+src/portfolio.js Multi-site portfolio: per-site weather and risk, simulated demo operations
 src/monitor.js   Tick loop: perceive → detect events → Claude → safety floor → routine check-ins
 src/server.js    Express API + static dashboard
-public/          Supervisor dashboard, worker phone simulator, planner view (no build step)
+public/          Command centre (Leaflet map), live dashboard, phone simulator, planner (no build step)
 ```
 
 ```bash
-npm test   # heat maths, translations, safety floor, planner validation, compliance report
+npm test   # heat maths, translations, safety floor, planner, compliance report, portfolio
 ```
 
 ## Limits (prototype)

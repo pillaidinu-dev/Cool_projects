@@ -15,7 +15,7 @@ export const state = {};
 export function reset() {
   resetRecords();
   Object.assign(state, {
-    site: { id: 'site-1', name: 'Demo Site — Al Quoz Block 4', lat: 25.14, lon: 55.23, supervisor: 'Site Supervisor' },
+    site: { id: 'site-1', name: 'Mixed-use Block 4 — Al Quoz, Dubai', lat: 25.14, lon: 55.23, supervisor: 'Site Supervisor' },
     settings: { scenario: 'afternoon', timeScale: 20 }, // demo default: 1 real second = 20 site seconds
     conditions: null,
     crews: [

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HeatGuard</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E☀%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -33,11 +34,41 @@
   </header>
 
   <nav class="tabs" role="tablist">
-    <button role="tab" data-tab="live" aria-selected="true">Live site</button>
+    <button role="tab" data-tab="command" aria-selected="true">Command centre</button>
+    <button role="tab" data-tab="live" aria-selected="false">Live site</button>
     <button role="tab" data-tab="plan" aria-selected="false">Plan tomorrow</button>
   </nav>
 
-  <div id="view-live">
+  <div id="view-command">
+    <section class="plan-bar">
+      <div>
+        <h2>Command centre</h2>
+        <p id="cc-sub" class="muted small">All sites at a glance.</p>
+      </div>
+    </section>
+    <section class="plan-body">
+      <div id="cc-kpis" class="tiles"></div>
+      <div class="cc-grid">
+        <div class="panel cc-map-panel">
+          <div id="cc-map" role="region" aria-label="Map of sites"></div>
+          <div class="legend" id="cc-legend"></div>
+        </div>
+        <div class="panel">
+          <h2>Sites</h2>
+          <div class="wrap"><table class="cc-table" id="cc-sites"></table></div>
+        </div>
+      </div>
+      <div class="cols">
+        <div class="panel" id="cc-detail"></div>
+        <div class="panel">
+          <h2>Alerts across all sites</h2>
+          <div id="cc-alerts" class="feed"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="view-live" hidden>
   <section id="conditions" class="conditions"></section>
 
   <main class="grid">
@@ -92,5 +123,7 @@
 
   <script src="app.js"></script>
   <script src="planner.js"></script>
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="command.js"></script>
 </body>
 </html>

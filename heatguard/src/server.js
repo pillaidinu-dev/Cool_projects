@@ -10,6 +10,7 @@ import { LANGUAGES } from './i18n.js';
 import { planTomorrow, publishPlan } from './planner-agent.js';
 import { FORECASTS } from './weather.js';
 import { buildReport, renderReportHtml } from './report.js';
+import { tickPortfolio, portfolioSnapshot, resetPortfolio } from './portfolio.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4200;
@@ -18,6 +19,7 @@ const TICK_MS = 2000;
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(here, '..', 'public')));
+app.use('/vendor/leaflet', express.static(path.join(here, '..', 'node_modules', 'leaflet', 'dist')));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
@@ -95,11 +97,14 @@ app.post('/api/planner/publish', (_req, res) => {
   }
 });
 
+app.get('/api/portfolio', (_req, res) => res.json(portfolioSnapshot()));
+
 app.get('/api/report', (_req, res) => res.json(buildReport()));
 app.get('/report', (_req, res) => res.type('html').send(renderReportHtml(buildReport())));
 
 app.post('/api/reset', (_req, res) => {
   reset();
+  resetPortfolio();
   runTick();
   res.json({ ok: true });
 });
@@ -109,6 +114,9 @@ function runTick() {
 }
 
 setInterval(runTick, TICK_MS);
+const runPortfolio = () => tickPortfolio().catch((err) => log('system', `Portfolio update failed: ${err.message}`));
+setInterval(runPortfolio, 3000);
+runPortfolio();
 runTick();
 
 app.listen(PORT, () => {

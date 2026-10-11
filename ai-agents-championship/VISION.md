@@ -181,7 +181,7 @@ slide**.
   pilot results → business model → ask.
 - **The demo must show more than alerts.** Next build priority:
   1. **Planner agent:** "plan tomorrow" from the forecast, with a before/after schedule ✅ built
-  2. **Multi-site command centre:** a map of all sites and live risk
+  2. **Multi-site command centre:** a map of all sites and live risk ✅ built
   3. **Compliance report:** a one-click PDF of the day ✅ built
   4. **Real phones:** a WhatsApp or Telegram voice note arriving on stage
   5. **Wearable simulation:** one worker's heart rate rising triggers a personal alert

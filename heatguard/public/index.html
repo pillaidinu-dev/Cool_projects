@@ -31,6 +31,12 @@
     </div>
   </header>
 
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="live" aria-selected="true">Live site</button>
+    <button role="tab" data-tab="plan" aria-selected="false">Plan tomorrow</button>
+  </nav>
+
+  <div id="view-live">
   <section id="conditions" class="conditions"></section>
 
   <main class="grid">
@@ -66,7 +72,24 @@
       </div>
     </section>
   </main>
+  </div>
+
+  <div id="view-plan" hidden>
+    <section class="plan-bar">
+      <div>
+        <h2>Tomorrow's shift plan</h2>
+        <p id="plan-sub" class="muted small">The Planner agent schedules tomorrow's work around tomorrow's heat.</p>
+      </div>
+      <div class="controls">
+        <label class="muted small">Forecast <select id="plan-forecast"></select></label>
+        <button id="plan-run" class="btn primary">Plan tomorrow</button>
+        <button id="plan-publish" class="btn" disabled>Send schedule to crews</button>
+      </div>
+    </section>
+    <section id="plan-body" class="plan-body"><p class="empty">Choose a forecast and press <strong>Plan tomorrow</strong>.</p></section>
+  </div>
 
   <script src="app.js"></script>
+  <script src="planner.js"></script>
 </body>
 </html>

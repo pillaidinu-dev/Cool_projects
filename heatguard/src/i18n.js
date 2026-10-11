@@ -13,11 +13,13 @@ export const LANGUAGES = {
   tl: { name: 'Tagalog', voice: 'fil-PH' },
 };
 
+// Templates the live agent may choose. (shift_tomorrow is sent by the planner with times.)
 export const TEMPLATES = ['risk_update', 'take_break', 'hydrate', 'stop_work', 'midday_break', 'checkin', 'checkin_thanks', 'first_aid_coming'];
 
 const T = {
   en: {
     levels: ['Normal', 'Caution', 'High', 'Danger', 'Extreme'],
+    shift_tomorrow: 'HeatGuard: Tomorrow your crew starts at {start} and finishes by {end}. Heavy work is planned for the cooler hours. Drink water before you come.',
     risk_update: 'HeatGuard: Heat risk is now {levelName}. Drink water every {water} minutes. Work {work} min, then rest {rest} min in the shade.',
     risk_normal: 'HeatGuard: Heat risk is normal. Keep drinking water every {water} minutes.',
     stop_work: 'HeatGuard: EXTREME heat. Stop heavy outdoor work now. Go to the shade or rest area and drink water.',
@@ -30,6 +32,7 @@ const T = {
   },
   ar: {
     levels: ['طبيعي', 'حذر', 'مرتفع', 'خطر', 'شديد'],
+    shift_tomorrow: 'HeatGuard: غدًا يبدأ فريقك العمل الساعة {start} وينتهي بحلول {end}. تم تخطيط العمل الشاق في الساعات الأبرد. اشرب الماء قبل أن تأتي.',
     risk_update: 'HeatGuard: مستوى خطر الحرارة الآن {levelName}. اشرب الماء كل {water} دقيقة. اعمل {work} دقيقة، ثم استرح {rest} دقيقة في الظل.',
     risk_normal: 'HeatGuard: مستوى خطر الحرارة طبيعي. استمر في شرب الماء كل {water} دقيقة.',
     stop_work: 'HeatGuard: حرارة شديدة. أوقف العمل الشاق في الخارج الآن. توجّه إلى الظل أو منطقة الراحة واشرب الماء.',
@@ -42,6 +45,7 @@ const T = {
   },
   hi: {
     levels: ['सामान्य', 'सावधान', 'अधिक', 'खतरा', 'अत्यधिक'],
+    shift_tomorrow: 'HeatGuard: कल आपकी टीम {start} बजे काम शुरू करेगी और {end} तक खत्म करेगी। भारी काम ठंडे समय में रखा गया है। आने से पहले पानी पिएं।',
     risk_update: 'HeatGuard: गर्मी का खतरा अब {levelName} है। हर {water} मिनट में पानी पिएं। {work} मिनट काम करें, फिर {rest} मिनट छाया में आराम करें।',
     risk_normal: 'HeatGuard: गर्मी का खतरा सामान्य है। हर {water} मिनट में पानी पीते रहें।',
     stop_work: 'HeatGuard: अत्यधिक गर्मी। भारी बाहरी काम अभी बंद करें। छाया या आराम क्षेत्र में जाएं और पानी पिएं।',
@@ -54,6 +58,7 @@ const T = {
   },
   ur: {
     levels: ['معمول', 'احتیاط', 'زیادہ', 'خطرہ', 'شدید'],
+    shift_tomorrow: 'HeatGuard: کل آپ کی ٹیم {start} بجے کام شروع کرے گی اور {end} تک ختم کرے گی۔ بھاری کام ٹھنڈے اوقات میں رکھا گیا ہے۔ آنے سے پہلے پانی پئیں۔',
     risk_update: 'HeatGuard: گرمی کا خطرہ اب {levelName} ہے۔ ہر {water} منٹ بعد پانی پئیں۔ {work} منٹ کام کریں، پھر {rest} منٹ سائے میں آرام کریں۔',
     risk_normal: 'HeatGuard: گرمی کا خطرہ معمول کے مطابق ہے۔ ہر {water} منٹ بعد پانی پیتے رہیں۔',
     stop_work: 'HeatGuard: شدید گرمی۔ بھاری بیرونی کام ابھی بند کریں۔ سائے یا آرام کی جگہ پر جائیں اور پانی پئیں۔',
@@ -66,6 +71,7 @@ const T = {
   },
   ml: {
     levels: ['സാധാരണ', 'ജാഗ്രത', 'ഉയർന്നത്', 'അപകടം', 'അതികഠിനം'],
+    shift_tomorrow: 'HeatGuard: നാളെ നിങ്ങളുടെ ടീം {start}-ന് ജോലി തുടങ്ങി {end}-ഓടെ അവസാനിപ്പിക്കും. കഠിനമായ ജോലി ചൂട് കുറഞ്ഞ സമയത്താണ് ക്രമീകരിച്ചിരിക്കുന്നത്. വരുന്നതിന് മുമ്പ് വെള്ളം കുടിക്കുക.',
     risk_update: 'HeatGuard: ചൂടിന്റെ അപകടസാധ്യത ഇപ്പോൾ {levelName} ആണ്. ഓരോ {water} മിനിറ്റിലും വെള്ളം കുടിക്കുക. {work} മിനിറ്റ് ജോലി ചെയ്ത ശേഷം {rest} മിനിറ്റ് തണലിൽ വിശ്രമിക്കുക.',
     risk_normal: 'HeatGuard: ചൂടിന്റെ അപകടസാധ്യത സാധാരണ നിലയിലാണ്. ഓരോ {water} മിനിറ്റിലും വെള്ളം കുടിക്കുന്നത് തുടരുക.',
     stop_work: 'HeatGuard: അതികഠിനമായ ചൂട്. കഠിനമായ പുറംജോലി ഇപ്പോൾ നിർത്തുക. തണലിലേക്കോ വിശ്രമസ്ഥലത്തേക്കോ പോയി വെള്ളം കുടിക്കുക.',
@@ -78,6 +84,7 @@ const T = {
   },
   bn: {
     levels: ['স্বাভাবিক', 'সতর্কতা', 'উচ্চ', 'বিপজ্জনক', 'চরম'],
+    shift_tomorrow: 'HeatGuard: আগামীকাল আপনার দল {start}-এ কাজ শুরু করবে এবং {end}-এর মধ্যে শেষ করবে। ভারী কাজ ঠান্ডা সময়ে রাখা হয়েছে। আসার আগে পানি পান করুন।',
     risk_update: 'HeatGuard: গরমের ঝুঁকি এখন {levelName}। প্রতি {water} মিনিটে পানি পান করুন। {work} মিনিট কাজ করুন, তারপর {rest} মিনিট ছায়ায় বিশ্রাম নিন।',
     risk_normal: 'HeatGuard: গরমের ঝুঁকি স্বাভাবিক। প্রতি {water} মিনিটে পানি পান করতে থাকুন।',
     stop_work: 'HeatGuard: চরম গরম। ভারী বাইরের কাজ এখনই বন্ধ করুন। ছায়ায় বা বিশ্রামের জায়গায় যান এবং পানি পান করুন।',
@@ -90,6 +97,7 @@ const T = {
   },
   tl: {
     levels: ['Normal', 'Mag-ingat', 'Mataas', 'Mapanganib', 'Matindi'],
+    shift_tomorrow: 'HeatGuard: Bukas, magsisimula ang iyong crew nang {start} at matatapos bago mag-{end}. Ang mabibigat na trabaho ay nakaplano sa mas malamig na oras. Uminom ng tubig bago pumasok.',
     risk_update: 'HeatGuard: Ang panganib ng init ay {levelName} na ngayon. Uminom ng tubig tuwing {water} minuto. Magtrabaho nang {work} minuto, pagkatapos ay magpahinga nang {rest} minuto sa lilim.',
     risk_normal: 'HeatGuard: Normal ang panganib ng init. Patuloy na uminom ng tubig tuwing {water} minuto.',
     stop_work: 'HeatGuard: MATINDING init. Itigil na ngayon ang mabigat na trabaho sa labas. Pumunta sa lilim o pahingahan at uminom ng tubig.',

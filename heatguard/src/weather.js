@@ -56,14 +56,15 @@ const MONTHLY = [
   [42, 31], [42, 31], [40, 28], [36, 24], [31, 20], [26, 16],
 ];
 
-export function simulateDubai(now = new Date()) {
+export function simulateDubai(now = new Date(), profile = {}) {
   const local = new Date(now.getTime() + 4 * 3600 * 1000);
   const hour = local.getUTCHours() + local.getUTCMinutes() / 60;
-  const [hi, lo] = MONTHLY[local.getUTCMonth()];
+  const [hi, lo] = profile.hi ? [profile.hi, profile.lo] : MONTHLY[local.getUTCMonth()];
+  const [rhMax, rhMin] = profile.rhMax ? [profile.rhMax, profile.rhMin] : [75, 35];
   // Temperature peaks around 14:00 and bottoms out around 05:00.
   const phase = Math.cos(((hour - 14) / 24) * 2 * Math.PI);
   const tempC = lo + (hi - lo) * (phase + 1) / 2;
-  const rh = 75 - 40 * (phase + 1) / 2; // humid nights, drier afternoons
+  const rh = rhMax - (rhMax - rhMin) * (phase + 1) / 2; // humid nights, drier afternoons
   const sun = Math.sin(((hour - 6) / 13) * Math.PI); // daylight 06:00–19:00
   return {
     tempC: Math.round(tempC * 10) / 10,
@@ -73,4 +74,61 @@ export function simulateDubai(now = new Date()) {
     source: 'simulated',
     observedAt: now.toISOString(),
   };
+}
+
+// ---- Hourly forecast for the planner -------------------------------------------------
+
+export const FORECASTS = {
+  live: { label: 'Live forecast' },
+  typical: { label: 'Typical day for this month' },
+  heatwave: { label: 'Summer heatwave (45 °C)', profile: { hi: 45, lo: 30, rhMax: 60, rhMin: 25 }, summerRules: true },
+};
+
+/** YYYY-MM-DD of tomorrow in Dubai. */
+export function tomorrowInDubai(now = new Date()) {
+  return new Date(now.getTime() + 4 * 3600 * 1000 + 24 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/** 24 hourly readings for `date` (Dubai local). Falls back to a simulated day offline. */
+export async function getHourlyForecast(site, mode = 'live', date = tomorrowInDubai()) {
+  const preset = FORECASTS[mode] ?? FORECASTS.live;
+  if (mode === 'live') {
+    try {
+      return { date, hours: await fetchOpenMeteoHourly(site, date), source: 'Open-Meteo forecast', summerRules: false };
+    } catch (err) {
+      return { date, hours: simulateDay(date), source: `typical day (live forecast unavailable: ${err.message})`, summerRules: false };
+    }
+  }
+  return { date, hours: simulateDay(date, preset.profile), source: preset.label, summerRules: Boolean(preset.summerRules) };
+}
+
+function simulateDay(date, profile) {
+  const [y, m, d] = date.split('-').map(Number);
+  return Array.from({ length: 24 }, (_, hour) => {
+    const reading = simulateDubai(new Date(Date.UTC(y, m - 1, d, hour - 4)), profile);
+    return { hour, tempC: reading.tempC, rh: reading.rh, solarWm2: reading.solarWm2, windMs: reading.windMs };
+  });
+}
+
+async function fetchOpenMeteoHourly({ lat, lon }, date) {
+  const url = new URL('https://api.open-meteo.com/v1/forecast');
+  url.search = new URLSearchParams({
+    latitude: lat,
+    longitude: lon,
+    hourly: 'temperature_2m,relative_humidity_2m,wind_speed_10m,shortwave_radiation',
+    wind_speed_unit: 'ms',
+    timezone: 'Asia/Dubai',
+    start_date: date,
+    end_date: date,
+  });
+  const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const { hourly: h } = await res.json();
+  return h.time.map((t, i) => ({
+    hour: Number(t.slice(11, 13)),
+    tempC: h.temperature_2m[i],
+    rh: h.relative_humidity_2m[i],
+    windMs: h.wind_speed_10m[i],
+    solarWm2: h.shortwave_radiation[i],
+  }));
 }

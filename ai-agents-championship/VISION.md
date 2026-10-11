@@ -180,7 +180,7 @@ slide**.
   demo (heat spike → replanned shift → worker voice → escalation → compliance report) →
   pilot results → business model → ask.
 - **The demo must show more than alerts.** Next build priority:
-  1. **Planner agent:** "plan tomorrow" from the forecast, with a before/after schedule
+  1. **Planner agent:** "plan tomorrow" from the forecast, with a before/after schedule ✅ built
   2. **Multi-site command centre:** a map of all sites and live risk
   3. **Compliance report:** a one-click PDF of the day
   4. **Real phones:** a WhatsApp or Telegram voice note arriving on stage

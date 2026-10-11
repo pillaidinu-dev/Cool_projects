@@ -4,21 +4,12 @@
 // checks the result against a fixed safety floor, so a model mistake or outage can only
 // ever make the response stricter than the rules, never weaker.
 
-import Anthropic from '@anthropic-ai/sdk';
+import { claudeAvailable, runToolLoop } from './claude.js';
 import { state, findCrew, findWorker, sendToWorker, escalate, markUnwell, log } from './store.js';
 import { floorPlan, isAtLeastAsStrict, isMiddayBreak, LEVELS } from './heat.js';
 import { TEMPLATES } from './i18n.js';
 
-const MODEL = process.env.HEATGUARD_MODEL || 'claude-opus-5-5';
-const MAX_TURNS = 8;
-
-export function claudeAvailable() {
-  if (process.env.HEATGUARD_AGENT === 'rules') return false;
-  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
-}
-
-let client;
-const getClient = () => (client ??= new Anthropic());
+export { claudeAvailable };
 
 const SYSTEM = `You are HeatGuard, a safety agent protecting outdoor workers on a construction site in Dubai from heat stress.
 
@@ -164,44 +155,13 @@ export function runTool(name, input, handled) {
  */
 export async function runClaude(events) {
   const handled = { crews: new Set() };
-  const messages = [{
-    role: 'user',
-    content: `New site events (site time scale ${state.settings.timeScale}x):\n${JSON.stringify(events, null, 2)}`,
-  }];
-
-  for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const response = await getClient().beta.messages.create({
-      model: MODEL,
-      max_tokens: 16000,
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      output_config: { effort: 'medium' },
-      system: SYSTEM,
-      tools,
-      messages,
-    });
-
-    if (response.stop_reason === 'refusal') {
-      throw new Error(`Model declined (${response.stop_details?.category ?? 'no category'})`);
-    }
-    messages.push({ role: 'assistant', content: response.content });
-
-    const toolUses = response.content.filter((b) => b.type === 'tool_use');
-    if (response.stop_reason !== 'tool_use' || toolUses.length === 0) {
-      const summary = response.content.filter((b) => b.type === 'text').map((b) => b.text).join(' ').trim();
-      if (summary) log('agent', summary, 'claude');
-      return handled;
-    }
-
-    const results = toolUses.map((tu) => {
-      try {
-        return { type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(runTool(tu.name, tu.input, handled)) };
-      } catch (err) {
-        return { type: 'tool_result', tool_use_id: tu.id, is_error: true, content: err.message };
-      }
-    });
-    messages.push({ role: 'user', content: results });
-  }
-  log('agent', `Stopped after ${MAX_TURNS} turns; safety floor will complete any missing actions.`, 'claude');
+  const summary = await runToolLoop({
+    system: SYSTEM,
+    tools,
+    prompt: `New site events (site time scale ${state.settings.timeScale}x):\n${JSON.stringify(events, null, 2)}`,
+    runTool: (name, input) => runTool(name, input, handled),
+  });
+  if (summary === null) log('agent', 'Stopped after too many steps; safety floor will complete any missing actions.', 'claude');
+  else if (summary) log('agent', summary, 'claude');
   return handled;
 }

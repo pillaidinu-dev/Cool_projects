@@ -2,6 +2,7 @@
 
 import { render, LANGUAGES } from './i18n.js';
 import { floorPlan } from './heat.js';
+import { demoTasks } from './planner.js';
 
 const MAX_LOG = 300;
 let nextId = 1;
@@ -14,18 +15,19 @@ export function reset() {
     settings: { scenario: 'afternoon', timeScale: 20 }, // demo default: 1 real second = 20 site seconds
     conditions: null,
     crews: [
-      crew('c1', 'Concrete pour', 'heavy', [
+      crew('c1', 'Concrete crew', 'heavy', [
         ['Ramesh Kumar', 'hi'], ['Imran Ali', 'ur'], ['Suresh Nair', 'ml'], ['Rafiqul Islam', 'bn'],
       ]),
-      crew('c2', 'Facade & scaffolding', 'moderate', [
+      crew('c2', 'Facade crew', 'moderate', [
         ['Joel Santos', 'tl'], ['Ahmed Saleh', 'ar'], ['Vijay Menon', 'ml'],
       ]),
-      crew('c3', 'Landscaping', 'moderate', [['Mohammed Hossain', 'bn'], ['Arjun Singh', 'hi']]),
-      crew('c4', 'Gate security', 'light', [['Bilal Khan', 'ur'], ['Mark Reyes', 'tl']]),
+      crew('c3', 'Landscaping crew', 'moderate', [['Mohammed Hossain', 'bn'], ['Arjun Singh', 'hi']]),
+      crew('c4', 'Security team', 'light', [['Bilal Khan', 'ur'], ['Mark Reyes', 'tl']]),
     ],
     events: [],
     messages: [],
     middayNotifiedOn: null,
+    planner: { forecastMode: 'heatwave', tasks: demoTasks(), result: null, running: false, error: null },
     agent: { mode: null, running: false, lastRunAt: null, lastError: null },
   });
 }
@@ -55,10 +57,10 @@ export function log(type, text, source = 'system') {
   state.events.length = Math.min(state.events.length, MAX_LOG);
 }
 
-/** Send a templated message to a worker. Returns the stored message. */
-export function sendToWorker(worker, template, source) {
+/** Send a templated message to a worker. `params` fill extra placeholders (e.g. shift times). */
+export function sendToWorker(worker, template, source, params = {}) {
   const crewPlan = findCrew(worker.crewId).plan;
-  const text = render(template, worker.lang, crewPlan);
+  const text = render(template, worker.lang, { ...crewPlan, ...params });
   const msg = {
     id: nextId++, t: Date.now(), to: worker.id, toName: worker.name,
     lang: worker.lang, voice: LANGUAGES[worker.lang].voice, template, text, source, direction: 'out',

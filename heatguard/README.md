@@ -23,6 +23,27 @@ An AI agent that protects outdoor workers from heat stress. Entry prototype for 
 
 It also follows the UAE midday break (no outdoor work 12:30–15:00, 15 June – 15 September).
 
+### Planner agent: "Plan tomorrow"
+
+The **Plan tomorrow** tab schedules tomorrow's work around tomorrow's heat.
+
+1. Takes tomorrow's hourly forecast (live from Open-Meteo, a typical day for the month, or a
+   45 °C summer heatwave preset for demos) and the site's task list. Each task has a crew,
+   productive hours, work intensity, sun/shade, and whether it can be split or needs daylight.
+2. Shows **the usual plan** (everyone starts at 07:00): on a heatwave day work stalls in
+   Extreme heat and tasks don't finish.
+3. Builds a **rules-based heat-aware plan** that is always valid: heavy work goes into the
+   coolest feasible hours, with split shifts where allowed and a 10-hour duty limit per crew.
+   Mandatory rest stretches clock time in the heat, so cooler hours are also more productive.
+4. **Claude** reviews the forecast, tries alternatives with `evaluate_plan`, and submits a plan
+   with a supervisor briefing and logistics (water, cooling stations, lighting for night work,
+   guard rotation). The server rejects any submitted plan with a violation (Extreme heat,
+   midday break, no daylight, overlaps, over the duty limit, unfinished tasks).
+5. Shows before/after numbers (time in Danger-level heat, work stopped, unfinished tasks,
+   mandatory rest, water, night hours) and two timelines coloured by heat level.
+6. **Send schedule to crews** tells every worker tomorrow's start and finish in their own
+   language.
+
 ### Design choices worth pitching
 
 - **The LLM decides, templates speak.** Claude picks which pre-translated message to send. It
@@ -68,6 +89,10 @@ engine still acts.
 4. On a worker's phone, type something like *"feeling dizzy"* (with Claude enabled). The agent
    sends first-aid guidance and raises a **critical** alert. Or press **2 · Unwell**.
 5. Click **Checked** on the supervisor side to close the loop.
+6. Switch to **Plan tomorrow**, choose **Summer heatwave**, and press **Plan tomorrow**. Compare
+   the usual 07:00 plan (work stopped for hours, tasks unfinished) with the HeatGuard plan
+   (concrete pour moved to 03:00, rebar to the evening, everything finished). Press
+   **Send schedule to crews** and open a worker's phone on the Live tab.
 
 ## How it's built
 
@@ -76,14 +101,17 @@ src/heat.js      WBGT estimate (Stull wet-bulb + globe temp), risk levels, floor
 src/weather.js   Open-Meteo, a simulated Dubai profile as fallback, demo scenarios
 src/i18n.js      Worker message templates in 7 languages
 src/store.js     In-memory site state, outbox, supervisor alerts
-src/agent.js     Claude tool-use loop: get_site_status, set_crew_plan, send_worker_message, escalate_to_supervisor
+src/claude.js    Shared Claude tool-use loop (with server-side refusal fallback)
+src/agent.js     Live agent tools: get_site_status, set_crew_plan, send_worker_message, escalate_to_supervisor
+src/planner.js   Shift planning: heat per 15-min slot, plan validation, usual plan, rules planner
+src/planner-agent.js  Planner agent tools: get_planning_context, evaluate_plan, submit_plan
 src/monitor.js   Tick loop: perceive → detect events → Claude → safety floor → routine check-ins
 src/server.js    Express API + static dashboard
-public/          Supervisor dashboard + worker phone simulator (no build step)
+public/          Supervisor dashboard, worker phone simulator, planner view (no build step)
 ```
 
 ```bash
-npm test   # heat maths, translations, and the safety floor end to end
+npm test   # heat maths, translations, safety floor, and planner validation
 ```
 
 ## Limits (prototype)

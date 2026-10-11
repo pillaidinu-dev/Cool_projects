@@ -7,6 +7,8 @@ import { claudeAvailable } from './agent.js';
 import { SCENARIOS } from './weather.js';
 import { LEVELS, isMiddayBreak } from './heat.js';
 import { LANGUAGES } from './i18n.js';
+import { planTomorrow, publishPlan } from './planner-agent.js';
+import { FORECASTS } from './weather.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4200;
@@ -67,6 +69,29 @@ app.post('/api/agent/review', (_req, res) => {
   queueEvent({ type: 'supervisor_requested_review' });
   runTick();
   res.json({ ok: true });
+});
+
+app.get('/api/planner', (_req, res) => {
+  res.json({ ...state.planner, crews: state.crews.map((c) => ({ id: c.id, name: c.name, workers: c.workers.length })), forecasts: FORECASTS, agentMode: claudeAvailable() ? 'claude' : 'rules' });
+});
+
+app.post('/api/planner/run', (req, res) => {
+  const mode = req.body?.forecast ?? state.planner.forecastMode;
+  if (!FORECASTS[mode]) return res.status(400).json({ error: 'Unknown forecast' });
+  if (state.planner.running) return res.status(409).json({ error: 'Already planning' });
+  planTomorrow(mode).catch((err) => {
+    state.planner.error = err.message;
+    log('system', `Planning failed: ${err.message}`);
+  });
+  res.status(202).json({ ok: true });
+});
+
+app.post('/api/planner/publish', (_req, res) => {
+  try {
+    res.json({ sent: publishPlan() });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 app.post('/api/reset', (_req, res) => {

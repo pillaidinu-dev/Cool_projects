@@ -10,8 +10,6 @@ with its own client/server, README, and Dockerfile.
   weekly planner: a day/time grid for to-dos, subject colors, and reminders.
 - **[Momentum Dashboard](momentum-dashboard/README.md)** (`momentum-dashboard/`) — every US stock
   up 100%+ year-to-date, screened from live Robinhood market data, with charts.
-- **[HeatGuard](heatguard/README.md)** (`heatguard/`) — an AI agent that protects outdoor workers
-  from heat stress (Dubai Create AI Agents Championship entry).
 
 ---
 

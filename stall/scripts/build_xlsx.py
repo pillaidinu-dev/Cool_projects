@@ -215,9 +215,12 @@ put(ac, "A17", "Profit / loss", BOLD)
 put(ac, "B17", "=B14-B15-B16", BLACK, MONEY0, TOT_FILL, bold=True); put(ac, "C17", "=C14-C15-C16", BLACK, MONEY0, TOT_FILL, bold=True)
 for c in "ABC": ac[f"{c}17"].border = TOP
 ac["A17"].fill = TOT_FILL
-put(ac, "A18", "Actual vs expected"); put(ac, "C18", "=C17-B17", BLACK, MONEY0)
+put(ac, "A18", "Profit margin"); put(ac, "B18", "=IF(B14=0,0,B17/B14)", BLACK, PCT); put(ac, "C18", "=IF(C14=0,0,C17/C14)", BLACK, PCT)
+put(ac, "D18", "Profit / sales: the share of each dollar of sales you kept.", NOTE)
+put(ac, "A19", "Actual vs expected profit"); put(ac, "C19", "=C17-B17", BLACK, MONEY0)
 put(ac, "A20", "Expected uses the Inputs guesses; Actual uses what the tracker recorded.", NOTE)
 ac.conditional_formatting.add("E5:E11", CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, color="C0392B")))
+ac.conditional_formatting.add("C19", CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, bold=True, color="C0392B")))
 ac.conditional_formatting.add("B17:C18", CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, bold=True, color="C0392B")))
 ac.conditional_formatting.add("B17:C17", CellIsRule(operator="greaterThan", formula=["0"], font=Font(name=F, bold=True, color="2F7D32")))
 widths(ac, {"A": 26, "B": 12, "C": 12, "D": 13, "E": 13, "F": 14, "G": 15})

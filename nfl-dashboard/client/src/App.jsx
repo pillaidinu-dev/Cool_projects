@@ -1,5 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchGames, fetchLeaders, fetchPredictions } from './api.js';
+import {
+  fetchGames,
+  fetchLeaders,
+  fetchSeasonLeaders,
+  fetchFantasyLeaders,
+  fetchSeasonFantasyLeaders,
+  fetchPredictions,
+} from './api.js';
 import ScoreboardCard from './components/ScoreboardCard.jsx';
 import LeadersTable from './components/LeadersTable.jsx';
 import TouchdownFeed from './components/TouchdownFeed.jsx';
@@ -14,6 +21,10 @@ const TABS = [
 ];
 
 const REFRESH_MS = 20_000;
+// Season leaders walk every completed week's box scores, not just the
+// current one -- a heavier fetch, so it refreshes less often and only
+// while the season view is actually being looked at (see the effect below).
+const SEASON_REFRESH_MS = 60_000;
 
 function formatDayHeading(ymd) {
   // ymd is 'YYYYMMDD' as returned by the API, dated in UTC to match how
@@ -43,24 +54,61 @@ const RECEIVING_COLUMNS = [
   { key: 'long', label: 'Lng' },
 ];
 
+// Season tables reuse the weekly column sets plus a games-played count,
+// since "210 yards" means something different across 1 game vs 6.
+const SEASON_PASSING_COLUMNS = [...PASSING_COLUMNS, { key: 'games', label: 'GP' }];
+const SEASON_RUSHING_COLUMNS = [...RUSHING_COLUMNS, { key: 'games', label: 'GP' }];
+const SEASON_RECEIVING_COLUMNS = [...RECEIVING_COLUMNS, { key: 'games', label: 'GP' }];
+const TOUCHDOWN_LEADER_COLUMNS = [
+  { key: 'touchdowns', label: 'TD' },
+  { key: 'games', label: 'GP' },
+];
+
+// Full-PPR: 1pt/25 pass yds, 4pt pass TD, -2 INT, 1pt/10 rush-rec yds,
+// 6pt rush/rec TD, 1pt/reception -- see stats.js's FANTASY_SCORING.
+const FANTASY_COLUMNS = [
+  { key: 'fantasyPoints', label: 'Pts' },
+  { key: 'passYards', label: 'Pass Yds' },
+  { key: 'passTouchdowns', label: 'Pass TD' },
+  { key: 'interceptions', label: 'Int' },
+  { key: 'rushYards', label: 'Rush Yds' },
+  { key: 'rushTouchdowns', label: 'Rush TD' },
+  { key: 'receptions', label: 'Rec' },
+  { key: 'recYards', label: 'Rec Yds' },
+  { key: 'recTouchdowns', label: 'Rec TD' },
+];
+const SEASON_FANTASY_COLUMNS = [...FANTASY_COLUMNS, { key: 'games', label: 'GP' }];
+
+const EMPTY_LEADERS = { passing: [], rushing: [], receiving: [], touchdowns: [] };
+const EMPTY_FANTASY = { fantasy: [] };
+
 export default function App() {
   const [days, setDays] = useState([]);
-  const [leaders, setLeaders] = useState({ passing: [], rushing: [], receiving: [], touchdowns: [] });
+  const [leaders, setLeaders] = useState(EMPTY_LEADERS);
   const [predictions, setPredictions] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('scoreboard');
+  const [leaderRange, setLeaderRange] = useState('week');
+  const [seasonLeaders, setSeasonLeaders] = useState(EMPTY_LEADERS);
+  const [seasonMeta, setSeasonMeta] = useState(null);
+  const [seasonLoading, setSeasonLoading] = useState(false);
+  const [seasonError, setSeasonError] = useState(null);
+  const [fantasy, setFantasy] = useState(EMPTY_FANTASY);
+  const [seasonFantasy, setSeasonFantasy] = useState(EMPTY_FANTASY);
 
   const refresh = useCallback(async () => {
     try {
-      const [gamesData, leadersData, predictionsData] = await Promise.all([
+      const [gamesData, leadersData, fantasyData, predictionsData] = await Promise.all([
         fetchGames(),
         fetchLeaders(),
+        fetchFantasyLeaders(),
         fetchPredictions(),
       ]);
       setDays(gamesData.days || []);
       setLeaders(leadersData);
+      setFantasy(fantasyData);
       setPredictions(predictionsData);
       setLastUpdated(new Date());
       setError(null);
@@ -77,8 +125,35 @@ export default function App() {
     return () => clearInterval(id);
   }, [refresh]);
 
-  const receivers = leaders.receiving.filter((r) => r.position === 'WR' || !r.position);
-  const tightEnds = leaders.receiving.filter((r) => r.position === 'TE');
+  const refreshSeason = useCallback(async () => {
+    setSeasonLoading(true);
+    try {
+      const [data, fantasyData] = await Promise.all([fetchSeasonLeaders(), fetchSeasonFantasyLeaders()]);
+      setSeasonLeaders(data);
+      setSeasonFantasy(fantasyData);
+      setSeasonMeta({ season: data.season, throughWeek: data.throughWeek });
+      setSeasonError(null);
+    } catch (err) {
+      setSeasonError(err.message);
+    } finally {
+      setSeasonLoading(false);
+    }
+  }, []);
+
+  // Walking every week's box scores is a much heavier fetch than the
+  // current-week view, so only poll it while someone's actually looking at
+  // the season toggle -- not on every 20s tick regardless of tab/range.
+  useEffect(() => {
+    if (tab !== 'scoreboard' || leaderRange !== 'season') return undefined;
+    refreshSeason();
+    const id = setInterval(refreshSeason, SEASON_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [tab, leaderRange, refreshSeason]);
+
+  const activeLeaders = leaderRange === 'season' ? seasonLeaders : leaders;
+  const activeFantasy = leaderRange === 'season' ? seasonFantasy : fantasy;
+  const receivers = activeLeaders.receiving.filter((r) => r.position === 'WR' || !r.position);
+  const tightEnds = activeLeaders.receiving.filter((r) => r.position === 'TE');
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -134,11 +209,67 @@ export default function App() {
               )}
             </section>
 
-            <section className="grid gap-6 lg:grid-cols-2">
-              <LeadersTable title="Passing Leaders (QB)" columns={PASSING_COLUMNS} rows={leaders.passing} />
-              <LeadersTable title="Rushing Leaders (RB)" columns={RUSHING_COLUMNS} rows={leaders.rushing} />
-              <LeadersTable title="Receiving Leaders (WR)" columns={RECEIVING_COLUMNS} rows={receivers} />
-              <LeadersTable title="Receiving Leaders (TE)" columns={RECEIVING_COLUMNS} rows={tightEnds} />
+            <section className="flex flex-col gap-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Leaders</h2>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="flex rounded-lg border border-slate-700/60 overflow-hidden">
+                    {[
+                      { key: 'week', label: 'This Week' },
+                      { key: 'season', label: 'Season' },
+                    ].map((r) => (
+                      <button
+                        key={r.key}
+                        type="button"
+                        onClick={() => setLeaderRange(r.key)}
+                        className={`px-3 py-1.5 font-medium transition-colors ${
+                          leaderRange === r.key
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                  {leaderRange === 'season' && (
+                    <span className="text-slate-500">
+                      {seasonLoading && !seasonMeta
+                        ? 'Loading…'
+                        : seasonMeta && `Through week ${seasonMeta.throughWeek}, ${seasonMeta.season}`}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {leaderRange === 'season' && seasonError && (
+                <p className="text-rose-400 text-sm">{seasonError}</p>
+              )}
+
+              <LeadersTable
+                title="Fantasy Points Leaders (Full PPR)"
+                columns={leaderRange === 'season' ? SEASON_FANTASY_COLUMNS : FANTASY_COLUMNS}
+                rows={activeFantasy.fantasy}
+              />
+
+              <section className="grid gap-6 lg:grid-cols-2">
+                {leaderRange === 'week' ? (
+                  <>
+                    <LeadersTable title="Passing Leaders (QB)" columns={PASSING_COLUMNS} rows={activeLeaders.passing} />
+                    <LeadersTable title="Rushing Leaders (RB)" columns={RUSHING_COLUMNS} rows={activeLeaders.rushing} />
+                    <LeadersTable title="Receiving Leaders (WR)" columns={RECEIVING_COLUMNS} rows={receivers} />
+                    <LeadersTable title="Receiving Leaders (TE)" columns={RECEIVING_COLUMNS} rows={tightEnds} />
+                  </>
+                ) : (
+                  <>
+                    <LeadersTable title="Passing Leaders (QB)" columns={SEASON_PASSING_COLUMNS} rows={activeLeaders.passing} />
+                    <LeadersTable title="Rushing Leaders (RB)" columns={SEASON_RUSHING_COLUMNS} rows={activeLeaders.rushing} />
+                    <LeadersTable title="Receiving Leaders (WR)" columns={SEASON_RECEIVING_COLUMNS} rows={receivers} />
+                    <LeadersTable title="Receiving Leaders (TE)" columns={SEASON_RECEIVING_COLUMNS} rows={tightEnds} />
+                    <LeadersTable title="Touchdown Leaders" columns={TOUCHDOWN_LEADER_COLUMNS} rows={activeLeaders.touchdowns} />
+                  </>
+                )}
+              </section>
             </section>
           </>
         )}
@@ -204,6 +335,7 @@ export default function App() {
                 emptyMessage={predictions.note || 'No projections yet.'}
               />
               <TouchdownProbability
+                accent="#34d399"
                 rows={predictions.touchdowns}
                 emptyMessage={predictions.note || 'No projections yet.'}
               />

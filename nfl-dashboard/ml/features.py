@@ -13,9 +13,21 @@ def _team_week_allowed(df, stat_col):
     return allowed.rename(columns={"opponent": "defense_team", stat_col: "allowed"})
 
 
-def build_training_frame(df, stat_col, position_filter):
+def build_training_frame(df, stat_col, position_filter, drop_zero_debuts=True):
     """One row per player-game with leakage-free features (built from games
-    strictly before that row's week) and the target column."""
+    strictly before that row's week) and the target column.
+
+    `drop_zero_debuts` controls whether a "debut" row (games_played == 0,
+    i.e. no prior-week history yet) with target == 0 is dropped as
+    uninformative. That's the right call for a yardage target, where zero is
+    rare among real contributors. It's the wrong call for a sparse/binary-ish
+    target like touchdowns, where zero is the *majority*, informative
+    outcome: on the season's very first training frame (week 1 -> week 2),
+    every row is a debut, so this filter would keep only players who scored
+    in week 1 and drop everyone else -- training the model on scorers alone,
+    which is exactly why it predicted a ~72% average touchdown probability
+    against an actual ~18% score rate. Pass False for that kind of target.
+    """
     scoped = df[df["position"].isin(position_filter)].sort_values(["player", "team", "week"]).copy()
 
     # NB: SeriesGroupBy.apply(fn) returns a MultiIndex of (group keys...,
@@ -51,10 +63,11 @@ def build_training_frame(df, stat_col, position_filter):
     ).fillna(league_avg)
 
     scoped["target"] = scoped[stat_col]
-    # Keep rows where the player had at least some history, or actually
-    # produced the stat this game — nothing for the model to learn from an
-    # all-zero debut row otherwise.
-    scoped = scoped[(scoped["games_played"] > 0) | (scoped["target"] > 0)]
+    if drop_zero_debuts:
+        # Keep rows where the player had at least some history, or actually
+        # produced the stat this game — nothing for the model to learn from
+        # an all-zero debut row otherwise.
+        scoped = scoped[(scoped["games_played"] > 0) | (scoped["target"] > 0)]
     return scoped[["player", "team", "opponent", "week"] + FEATURE_COLS + ["target"]].reset_index(drop=True)
 
 

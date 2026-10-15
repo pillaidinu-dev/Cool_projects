@@ -1,0 +1,588 @@
+<title>Payday Ledger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one column laid out like a pay stub. Net pay minus spending and saving gives what's left, then the daily allowance, the spend form, budgets by category, the month's entries and a six-month trend. */
+:root{
+  --bg:#eef1f5; --paper:#ffffff; --sunk:#e3e8ef; --line:#cfd7e2; --rule:#9aa7b8;
+  --fg:#16202e; --muted:#5a6779;
+  --ink:#2f45b8; --ink-soft:#dfe4fa; --on-ink:#ffffff;
+  --good:#1f7a4d; --warn:#b26a00; --bad:#c03434; --save:#0f7f86;
+  --display:"Familjen Grotesk",ui-sans-serif,system-ui,sans-serif;
+  --body:"Public Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:12px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f141c; --paper:#171e29; --sunk:#202835; --line:#2c3646; --rule:#4a586c;
+  --fg:#e6ebf2; --muted:#98a4b5;
+  --ink:#8ea0ff; --ink-soft:#232c4f; --on-ink:#0f141c;
+  --good:#5cc98f; --warn:#f0a83a; --bad:#ff7d7d; --save:#4cc4cb; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141c; --paper:#171e29; --sunk:#202835; --line:#2c3646; --rule:#4a586c;
+  --fg:#e6ebf2; --muted:#98a4b5;
+  --ink:#8ea0ff; --ink-soft:#232c4f; --on-ink:#0f141c;
+  --good:#5cc98f; --warn:#f0a83a; --bad:#ff7d7d; --save:#4cc4cb; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:700px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 90px;display:flex;flex-direction:column;gap:22px}
+h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:1.45rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.08rem;font-weight:700}
+.label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+input,select{font:inherit;color:var(--fg);background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:10px 11px;min-width:0;width:100%}
+input[type=checkbox]{width:auto}
+.btn{background:var(--ink);color:var(--on-ink);font-weight:600;border-radius:9px;padding:10px 16px;white-space:nowrap}
+.btn.ghost{background:var(--sunk);color:var(--fg)}
+.link{color:var(--ink);font-weight:600;font-size:.85rem;text-decoration:underline;text-underline-offset:3px}
+.muted{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:12px}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+
+/* Top bar */
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.status{font-size:.78rem;color:var(--muted)}
+.monthnav{display:flex;align-items:center;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:99px;padding:3px}
+.monthnav button{width:34px;height:34px;border-radius:99px;font-size:1.1rem;color:var(--muted)}
+.monthnav button:hover{background:var(--sunk);color:var(--fg)}
+.monthnav strong{font-family:var(--display);min-width:9.5em;text-align:center}
+
+/* Pay stub */
+.stub{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.stub-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px dashed var(--rule);background:var(--sunk)}
+.stub-rows{padding:8px 16px 4px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0}
+.row .what{display:flex;flex-direction:column;min-width:0}
+.row .what small{color:var(--muted);font-size:.78rem}
+.row .amt{font-family:var(--mono);font-size:1rem;white-space:nowrap}
+.row.minus .amt::before{content:"− ";color:var(--muted)}
+.row.total{border-top:2px solid var(--fg);margin-top:4px;padding-top:10px}
+.row.total .what span{font-family:var(--display);font-weight:700;font-size:1.05rem}
+.row.total .amt{font-size:1.6rem;font-weight:700}
+.row.total .amt.neg{color:var(--bad)}
+.inline-edit{display:flex;gap:6px;align-items:center;margin-top:6px}
+.inline-edit input{width:9em;padding:7px 9px}
+.inline-edit .btn{padding:7px 12px}
+.meter{padding:4px 16px 14px;display:flex;flex-direction:column;gap:6px}
+.track{height:10px;border-radius:99px;background:var(--sunk);overflow:hidden;display:flex}
+.track i{display:block;height:100%}
+.track .s{background:var(--ink)} .track .v{background:var(--save)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
+.legend b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:0}
+.allow{display:flex;gap:14px;align-items:center;padding:12px 16px;border-top:1px dashed var(--rule)}
+.allow .big{font-family:var(--mono);font-weight:700;font-size:1.25rem;white-space:nowrap}
+.allow p{margin:0;font-size:.88rem;color:var(--muted)}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;border-radius:99px;padding:2px 9px;letter-spacing:.02em}
+.pill.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.pill.over{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+
+/* Forms */
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:.78rem;font-weight:600;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:6px 12px;font-size:.85rem;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
+.amt-in{font-family:var(--mono);font-size:1.15rem}
+.formrow{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.formrow .field{flex:1 1 140px}
+
+/* Budgets */
+.cats{display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:var(--r)}
+.cat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:11px 16px;border-top:1px solid var(--line)}
+.cat:first-child{border-top:0}
+.cat .nm{font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cat .fig{font-family:var(--mono);font-size:.9rem;text-align:right;white-space:nowrap}
+.cat .fig small{color:var(--muted)}
+.cat .bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.cat .bar i{display:block;height:100%;background:var(--ink);border-radius:99px}
+.cat.warn .bar i{background:var(--warn)} .cat.over .bar i{background:var(--bad)} .cat.saving .bar i{background:var(--save)}
+
+/* Entries */
+.day{display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.day-h{display:flex;justify-content:space-between;padding:7px 16px;background:var(--sunk);font-size:.8rem;font-weight:600;color:var(--muted)}
+.entry{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--line)}
+.day-h + .entry{border-top:0}
+.entry .t{min-width:0;overflow-wrap:anywhere}
+.entry .t small{display:block;color:var(--muted);font-size:.78rem}
+.entry .a{font-family:var(--mono);white-space:nowrap}
+.entry.inc .a{color:var(--good)}
+.x{width:30px;height:30px;border-radius:8px;color:var(--muted);font-size:1rem}
+.x:hover{background:var(--sunk);color:var(--bad)}
+.x.armed{background:var(--bad);color:var(--paper);width:auto;padding:0 10px;font-size:.78rem;font-weight:700}
+.empty{background:var(--paper);border:1px dashed var(--rule);border-radius:var(--r);padding:18px 16px;color:var(--muted);font-size:.9rem}
+
+/* Trend */
+.chart{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 6px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:320px;height:auto}
+.chart text{font-family:var(--body);font-size:11px;fill:var(--muted)}
+.chart .cur{fill:var(--fg);font-weight:700}
+
+/* Setup */
+.catedit{display:grid;grid-template-columns:minmax(0,1fr) 7.5em auto auto;gap:8px;align-items:center}
+.catedit .sv{font-size:.75rem;color:var(--muted);display:flex;gap:4px;align-items:center;white-space:nowrap}
+details.card > summary{cursor:pointer;font-family:var(--display);font-weight:700;font-size:1.05rem;list-style-position:inside}
+.notice{background:color-mix(in srgb,var(--warn) 14%,var(--paper));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);color:var(--fg);border-radius:var(--r);padding:10px 14px;font-size:.88rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:10px;padding:10px 14px;display:flex;gap:14px;align-items:center;font-size:.88rem;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px);z-index:20}
+.toast button{color:var(--bg);font-weight:700;text-decoration:underline}
+@media (max-width:480px){
+  .grid2{grid-template-columns:1fr}
+  .catedit{grid-template-columns:minmax(0,1fr) 5.5em auto auto;gap:6px}
+  .row.total .amt{font-size:1.35rem}
+}
+@media (prefers-reduced-motion:no-preference){.track i,.cat .bar i{transition:width .35s}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Payday Ledger</h1>
+      <div class="status" id="status">Loading…</div>
+    </div>
+    <nav class="monthnav" aria-label="Month">
+      <button id="prev" aria-label="Previous month">‹</button>
+      <strong id="monthLabel"></strong>
+      <button id="next" aria-label="Next month">›</button>
+    </nav>
+  </header>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <!-- Pay stub summary -->
+  <article class="stub" aria-label="Month summary">
+    <div class="stub-h"><span class="label" id="periodLabel">Pay period</span><span class="label" id="entriesLabel"></span></div>
+    <div class="stub-rows">
+      <div class="row">
+        <div class="what"><span>Take-home salary</span><small id="salaryNote"></small>
+          <div class="inline-edit" id="salaryEdit" hidden>
+            <input id="salaryMonthIn" inputmode="decimal" aria-label="Salary for this month">
+            <button class="btn" id="salaryMonthSave">Save</button>
+            <button class="link" id="salaryMonthReset">Use default</button>
+          </div>
+        </div>
+        <span class="amt" id="vSalary">—</span>
+      </div>
+      <div class="row" id="extraRow" hidden><div class="what"><span>Other income</span><small id="extraNote"></small></div><span class="amt" id="vExtra"></span></div>
+      <div class="row minus"><div class="what"><span>Spent</span><small id="spentNote"></small></div><span class="amt" id="vSpent">—</span></div>
+      <div class="row minus"><div class="what"><span>Saved &amp; invested</span></div><span class="amt" id="vSaved">—</span></div>
+      <div class="row total"><div class="what"><span>Left this month</span></div><span class="amt" id="vLeft">—</span></div>
+    </div>
+    <div class="meter">
+      <div class="track" role="img" id="track" aria-label=""><i class="s" id="trS"></i><i class="v" id="trV"></i></div>
+      <div class="legend"><span><b style="background:var(--ink)"></b>Spent</span><span><b style="background:var(--save)"></b>Saved</span><span><b style="background:var(--sunk);outline:1px solid var(--line)"></b>Left</span></div>
+    </div>
+    <div class="allow" id="allow"><div class="big" id="allowBig">—</div><p id="allowText"></p></div>
+  </article>
+
+  <!-- Add spend -->
+  <section aria-labelledby="addH">
+    <div class="head"><h2 id="addH">Add spending</h2><button class="link" id="toIncome">Add other income instead</button></div>
+    <form class="card" id="spendForm" autocomplete="off">
+      <div class="grid2">
+        <div class="field"><label for="amt">Amount</label><input id="amt" class="amt-in" inputmode="decimal" placeholder="0.00" required></div>
+        <div class="field"><label for="what">What for</label><input id="what" placeholder="e.g. Costco run" maxlength="80"></div>
+      </div>
+      <div class="field"><span class="label">Category</span><div class="chips" id="catChips" role="group" aria-label="Category"></div></div>
+      <div class="formrow">
+        <div class="field"><label for="date">Date</label><input id="date" type="date" required></div>
+        <button class="btn" type="submit" id="addBtn">Add spending</button>
+      </div>
+    </form>
+    <form class="card" id="incomeForm" autocomplete="off" hidden>
+      <div class="grid2">
+        <div class="field"><label for="incAmt">Amount</label><input id="incAmt" class="amt-in" inputmode="decimal" placeholder="0.00" required></div>
+        <div class="field"><label for="incWhat">Source</label><input id="incWhat" placeholder="e.g. Bonus, side gig, refund" maxlength="80"></div>
+      </div>
+      <div class="formrow">
+        <div class="field"><label for="incDate">Date</label><input id="incDate" type="date" required></div>
+        <button class="btn" type="submit">Add income</button>
+        <button class="btn ghost" type="button" id="toSpend">Back to spending</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Budgets -->
+  <section aria-labelledby="budH">
+    <div class="head"><h2 id="budH">Budget by category</h2><span class="muted" id="budTotal" style="font-size:.85rem"></span></div>
+    <div class="cats" id="cats"></div>
+  </section>
+
+  <!-- Entries -->
+  <section aria-labelledby="entH">
+    <div class="head"><h2 id="entH">This month's entries</h2><button class="link" id="exportBtn" hidden>Download CSV</button></div>
+    <div id="entries"></div>
+  </section>
+
+  <!-- Trend -->
+  <section aria-labelledby="trendH">
+    <div class="head"><h2 id="trendH">Last six months</h2></div>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <!-- Setup -->
+  <details class="card" id="setup">
+    <summary>Salary &amp; budget setup</summary>
+    <div class="grid2">
+      <div class="field"><label for="salaryIn">Monthly take-home salary</label><input id="salaryIn" class="amt-in" inputmode="decimal" placeholder="After tax and deductions"></div>
+      <div class="field"><label for="currencyIn">Currency</label>
+        <select id="currencyIn">
+          <option value="USD">US dollar (USD)</option><option value="INR">Indian rupee (INR)</option><option value="EUR">Euro (EUR)</option>
+          <option value="GBP">British pound (GBP)</option><option value="CAD">Canadian dollar (CAD)</option><option value="AUD">Australian dollar (AUD)</option>
+          <option value="AED">UAE dirham (AED)</option><option value="SGD">Singapore dollar (SGD)</option>
+        </select></div>
+    </div>
+    <div class="field">
+      <span class="label">Categories and monthly budgets</span>
+      <p class="muted" style="margin:0;font-size:.82rem">Leave a budget at 0 to track a category without a limit. Tick “saving” for money you set aside, so it isn't counted as spending.</p>
+      <div id="catEdit" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div><button class="btn ghost" type="button" id="addCat">Add category</button></div>
+    </div>
+    <div class="formrow"><button class="btn" id="saveSetup" type="button">Save setup</button><span class="muted" id="setupMsg" style="font-size:.85rem"></span></div>
+  </details>
+</div>
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="toastUndo" hidden>Undo</button></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const DEFAULT_CATS = [
+    ["rent","Rent / mortgage"],["bills","Bills & utilities"],["groceries","Groceries"],["transport","Transport & fuel"],
+    ["eating","Eating out"],["shopping","Shopping"],["health","Health"],["family","Family & gifts"],
+    ["fun","Fun & subscriptions"],["other","Other"],["savings","Savings & investments",true]
+  ].map(([id,name,save]) => ({id,name,budget:0,save:!!save}));
+
+  /* ---------- State ---------- */
+  const S = {settings:null, spends:[], income:[], months:{}};
+  let store = null, downloads = null, writable = true;
+  let view = monthKey(new Date());
+  let pickedCat = null;
+
+  /* ---------- Helpers ---------- */
+  function monthKey(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
+  function todayISO(){ const d = new Date(); return monthKey(d) + "-" + String(d.getDate()).padStart(2,"0"); }
+  function shiftMonth(key, n){ const [y,m] = key.split("-").map(Number); return monthKey(new Date(y, m-1+n, 1)); }
+  function monthName(key, short){ const [y,m] = key.split("-").map(Number); return new Date(y,m-1,1).toLocaleDateString(undefined, short ? {month:"short"} : {month:"long", year:"numeric"}); }
+  function daysIn(key){ const [y,m] = key.split("-").map(Number); return new Date(y,m,0).getDate(); }
+  function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+  function parseAmt(v){ const n = parseFloat(String(v).replace(/[^0-9.\-]/g,"")); return isFinite(n) ? Math.round(n*100)/100 : NaN; }
+  function cur(){ return (S.settings && S.settings.currency) || "USD"; }
+  function money(n, whole){
+    try { return new Intl.NumberFormat(undefined,{style:"currency",currency:cur(),maximumFractionDigits:whole?0:2,minimumFractionDigits:whole?0:2}).format(n||0); }
+    catch(e){ return (n||0).toFixed(whole?0:2); }
+  }
+  function cats(){ return (S.settings && S.settings.categories && S.settings.categories.length) ? S.settings.categories : DEFAULT_CATS; }
+  function catById(id){ return cats().find(c => c.id === id) || {id, name: id || "Other", budget:0, save:false}; }
+  function defaultSalary(){ return (S.settings && +S.settings.salary) || 0; }
+  // The usual salary counts from the month you first set it up; earlier months need a per-month amount.
+  function salaryFor(key){ const o = S.months[key]; if (o && typeof o.salary === "number") return o.salary; const start = S.settings && S.settings.startMonth; return (start && key < start) ? 0 : defaultSalary(); }
+
+  function monthTotals(key){
+    const sp = S.spends.filter(s => s.month === key);
+    let spent = 0, saved = 0; const byCat = {};
+    for (const s of sp){ const c = catById(s.cat); byCat[c.id] = (byCat[c.id]||0) + s.amount; if (c.save) saved += s.amount; else spent += s.amount; }
+    const extra = S.income.filter(i => i.month === key).reduce((a,i) => a + i.amount, 0);
+    const salary = salaryFor(key);
+    const income = salary + extra;
+    return {salary, extra, income, spent, saved, left: income - spent - saved, byCat, count: sp.length};
+  }
+
+  /* ---------- Store: claude.ai db, or this browser when opened as a file ---------- */
+  const COLS = ["settings","spends","income","months"];
+  function apply(col, docs){
+    if (col === "settings") S.settings = (docs.find(d => d.id === "main") || {}).body || null;
+    else if (col === "months"){ S.months = {}; for (const d of docs) S.months[d.id] = d.body; }
+    else S[col] = docs.map(d => ({id:d.id, ...d.body}));
+    renderAll();
+  }
+  function dbStore(db){
+    return {
+      start(onErr){ for (const col of COLS){
+        const q = col === "spends" ? db.collection(col).orderBy("date","desc").limit(1000) : db.collection(col);
+        q.onSnapshot(s => apply(col, s.docs.map(d => ({id:d.id, body:d.data()}))), onErr);
+      } },
+      set: (col,id,body) => db.collection(col).doc(id).set(body),
+      del: (col,id) => db.collection(col).doc(id).delete(),
+    };
+  }
+  function localStore(){
+    const KEY = "payday-ledger-v1"; let data = {};
+    try { data = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){}
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e){ notice("This browser isn't keeping your entries. They'll be lost when you close the page."); } };
+    const emit = col => apply(col, Object.entries(data[col]||{}).map(([id,body]) => ({id, body})));
+    return {
+      start(){ COLS.forEach(emit); },
+      async set(col,id,body){ (data[col] ||= {})[id] = JSON.parse(JSON.stringify(body)); save(); emit(col); },
+      async del(col,id){ if (data[col]) delete data[col][id]; save(); emit(col); },
+    };
+  }
+  async function write(fn, failMsg){
+    if (!writable){ notice("This tracker is read-only for you."); return false; }
+    try { await fn(); return true; }
+    catch(e){
+      if (e && e.code === "invalid_argument" && store && store.kind === "db"){ writable = false; notice("You can't change this tracker. Only its owner and editors can."); }
+      else notice(failMsg || "Couldn't save that. Check your connection and try again.");
+      return false;
+    }
+  }
+
+  /* ---------- UI bits ---------- */
+  function notice(msg){ const n = $("notice"); n.textContent = msg || ""; n.hidden = !msg; }
+  let toastT = null;
+  function toast(msg, undo){
+    $("toastMsg").textContent = msg; $("toastUndo").hidden = !undo; $("toast").hidden = false;
+    $("toastUndo").onclick = async () => { $("toast").hidden = true; if (undo) await undo(); };
+    clearTimeout(toastT); toastT = setTimeout(() => { $("toast").hidden = true; }, 6000);
+  }
+  function armDelete(btn, onConfirm){
+    btn.onclick = () => {
+      if (btn.classList.contains("armed")){ onConfirm(); return; }
+      btn.classList.add("armed"); btn.textContent = "Delete";
+      setTimeout(() => { btn.classList.remove("armed"); btn.textContent = "✕"; }, 3000);
+    };
+  }
+  function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  /* ---------- Render ---------- */
+  function renderAll(){ renderHeader(); renderStub(); renderChips(); renderCats(); renderEntries(); renderChart(); renderSetup(); }
+
+  function renderHeader(){
+    $("monthLabel").textContent = monthName(view);
+    $("periodLabel").textContent = "Pay period · " + monthName(view, true) + " 1 – " + daysIn(view);
+  }
+
+  function renderStub(){
+    const t = monthTotals(view), def = defaultSalary();
+    $("vSalary").textContent = money(t.salary);
+    const overridden = S.months[view] && typeof S.months[view].salary === "number";
+    const beforeStart = !overridden && def && !t.salary;
+    $("salaryNote").textContent = !def && !overridden ? "Not set yet. Open Salary & budget setup below." : overridden ? "Changed for this month · " : beforeStart ? "Before you started tracking · " : "Your usual monthly pay · ";
+    if (def || overridden){ const b = el("button","link", "change for " + monthName(view,true)); b.textContent = beforeStart ? "add " + monthName(view,true) + " salary" : b.textContent; b.onclick = () => { $("salaryEdit").hidden = !$("salaryEdit").hidden; $("salaryMonthIn").value = t.salary || ""; $("salaryMonthIn").focus(); }; $("salaryNote").append(b); }
+    $("salaryMonthReset").hidden = !overridden;
+    $("extraRow").hidden = !t.extra; $("vExtra").textContent = "+ " + money(t.extra);
+    const nInc = S.income.filter(i => i.month === view).length; $("extraNote").textContent = nInc + (nInc === 1 ? " entry" : " entries");
+    $("vSpent").textContent = money(t.spent); $("vSaved").textContent = money(t.saved);
+    $("spentNote").textContent = t.income ? Math.round(t.spent / t.income * 100) + "% of income" : "";
+    $("vLeft").textContent = money(t.left); $("vLeft").classList.toggle("neg", t.left < 0);
+    $("entriesLabel").textContent = t.count + (t.count === 1 ? " expense" : " expenses");
+    const base = Math.max(t.income, t.spent + t.saved) || 1;
+    $("trS").style.width = (t.spent/base*100) + "%"; $("trV").style.width = (t.saved/base*100) + "%";
+    $("track").setAttribute("aria-label", "Spent " + money(t.spent) + ", saved " + money(t.saved) + " of " + money(t.income));
+
+    // Daily allowance
+    const now = monthKey(new Date()), big = $("allowBig"), txt = $("allowText");
+    big.style.color = "";
+    if (!t.income){ big.textContent = "—"; txt.textContent = "Add your take-home salary to see how much you can spend each day."; }
+    else if (view === now){
+      const daysLeft = daysIn(view) - new Date().getDate() + 1;
+      const per = t.left / daysLeft;
+      big.textContent = money(Math.max(per,0)) ; big.style.color = per < 0 ? "var(--bad)" : "";
+      txt.textContent = t.left < 0 ? "per day. You're " + money(-t.left) + " over this month's income." : "per day for the " + daysLeft + (daysLeft === 1 ? " day" : " days") + " left in " + monthName(view,true) + ", if you keep the rest.";
+    } else if (view < now){
+      big.textContent = Math.round(Math.max(t.saved + t.left,0) / t.income * 100) + "%";
+      txt.textContent = "of income kept (saved plus left over) in " + monthName(view) + ".";
+    } else { big.textContent = money(t.income); txt.textContent = "expected income. Entries you add here count toward " + monthName(view) + "."; }
+  }
+
+  function renderChips(){
+    const box = $("catChips"); box.textContent = "";
+    if (!pickedCat || !cats().some(c => c.id === pickedCat)) pickedCat = (cats().find(c => c.id === "groceries") || cats()[0]).id;
+    for (const c of cats()){
+      const b = el("button","chip",c.name); b.type = "button"; b.setAttribute("aria-pressed", c.id === pickedCat);
+      b.onclick = () => { pickedCat = c.id; renderChips(); };
+      box.append(b);
+    }
+  }
+
+  function renderCats(){
+    const t = monthTotals(view), box = $("cats"); box.textContent = "";
+    let budgetSum = 0;
+    const list = cats().slice().sort((a,b) => (t.byCat[b.id]||0) - (t.byCat[a.id]||0) || (b.budget||0) - (a.budget||0));
+    for (const c of list){
+      const spent = t.byCat[c.id] || 0, budget = +c.budget || 0; budgetSum += budget;
+      if (!spent && !budget) continue;
+      const r = el("div","cat"), nm = el("div","nm"); nm.append(el("span",null,c.name));
+      let cls = "", pill = null;
+      if (c.save){ cls = "saving"; if (budget) pill = spent >= budget ? ["ok","Goal met"] : ["warn", money(budget-spent,true) + " to go"]; }
+      else if (budget){ const p = spent / budget; cls = p >= 1 ? "over" : p >= .85 ? "warn" : ""; pill = p > 1 ? ["over", money(spent-budget,true) + " over"] : p >= .85 ? ["warn", money(budget-spent,true) + " left"] : ["ok", money(budget-spent,true) + " left"]; }
+      if (cls) r.classList.add(cls);
+      if (pill){ const p = el("span","pill " + pill[0], pill[1]); nm.append(p); }
+      const fig = el("div","fig"); fig.append(money(spent)); if (budget){ fig.append(el("small",null," / " + money(budget,true))); }
+      const bar = el("div","bar"), i = el("i"); i.style.width = Math.min(100, budget ? spent/budget*100 : (t.spent+t.saved ? spent/(t.spent+t.saved)*100 : 0)) + "%"; bar.append(i);
+      r.append(nm, fig, bar); box.append(r);
+    }
+    if (!box.children.length){ box.className = "empty"; box.textContent = "Nothing spent in " + monthName(view) + " yet. Set monthly budgets in Salary & budget setup to see how each category is tracking."; }
+    else box.className = "cats";
+    const sal = salaryFor(view);
+    $("budTotal").textContent = budgetSum ? "Budgeted " + money(budgetSum,true) + (sal ? " of " + money(sal,true) + " salary" : "") : "";
+  }
+
+  function renderEntries(){
+    const box = $("entries"); box.textContent = "";
+    const rows = [
+      ...S.spends.filter(s => s.month === view).map(s => ({...s, kind:"spend"})),
+      ...S.income.filter(i => i.month === view).map(i => ({...i, kind:"inc"})),
+    ].sort((a,b) => b.date.localeCompare(a.date) || (b.at||0) - (a.at||0));
+    $("exportBtn").hidden = !downloads || !rows.length;
+    if (!rows.length){ const e = el("div","empty", view === monthKey(new Date()) ? "No entries yet this month. Add your first expense above. It shows up here, grouped by day." : "No entries in " + monthName(view) + "."); box.append(e); return; }
+    const wrap = el("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:10px";
+    let day = null, card = null;
+    for (const r of rows){
+      if (r.date !== day){
+        day = r.date; card = el("div","day");
+        const [y,m,d] = day.split("-").map(Number);
+        const dayTotal = rows.filter(x => x.date === day && x.kind === "spend").reduce((a,x) => a + x.amount, 0);
+        const h = el("div","day-h"); h.append(el("span",null,new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})), el("span","num",dayTotal ? money(dayTotal) : ""));
+        card.append(h); wrap.append(card);
+      }
+      const e = el("div","entry" + (r.kind === "inc" ? " inc" : "")), t = el("div","t");
+      const c = r.kind === "inc" ? null : catById(r.cat);
+      t.append(el("span",null, r.label || (c ? c.name : "Income")), el("small",null, r.kind === "inc" ? "Income" : c.name));
+      const a = el("span","a", (r.kind === "inc" ? "+ " : "") + money(r.amount));
+      const x = el("button","x","✕"); x.setAttribute("aria-label","Delete " + (r.label || "entry"));
+      const col = r.kind === "inc" ? "income" : "spends";
+      armDelete(x, async () => {
+        const {id, kind, ...body} = r;
+        if (await write(() => store.del(col, id))) toast("Deleted " + money(r.amount) + (r.label ? " · " + r.label : ""), () => write(() => store.set(col, id, body)));
+      });
+      e.append(t, a, x); card.append(e);
+    }
+    box.append(wrap);
+  }
+
+  function renderChart(){
+    const months = []; for (let i = 5; i >= 0; i--) months.push(shiftMonth(view, -i));
+    const data = months.map(k => ({k, ...monthTotals(k)}));
+    const max = Math.max(1, ...data.map(d => Math.max(d.income, d.spent + d.saved)));
+    const step = niceStep(max / 3), top = Math.ceil(max / step) * step;
+    const W = 600, H = 210, L = 58, R = 10, T = 12, B = 30, cw = (W - L - R) / 6, bw = Math.min(46, cw * .5);
+    const y = v => T + (H - T - B) * (1 - v / top);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Spending and saving against income for the last six months">`;
+    for (let v = 0; v <= top + 1e-9; v += step){
+      s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`;
+      s += `<text x="${L-8}" y="${y(v)+4}" text-anchor="end">${esc(money(v,true))}</text>`;
+    }
+    data.forEach((d,i) => {
+      const cx = L + cw * i + cw / 2, x = cx - bw / 2;
+      const ys = y(d.spent), yv = y(d.spent + d.saved);
+      if (d.spent) s += `<rect x="${x}" y="${ys}" width="${bw}" height="${y(0)-ys}" fill="var(--ink)" rx="2"><title>${esc(monthName(d.k))}: spent ${esc(money(d.spent))}</title></rect>`;
+      if (d.saved) s += `<rect x="${x}" y="${yv}" width="${bw}" height="${ys-yv}" fill="var(--save)" rx="2"><title>${esc(monthName(d.k))}: saved ${esc(money(d.saved))}</title></rect>`;
+      if (d.income) s += `<line x1="${x-6}" x2="${x+bw+6}" y1="${y(d.income)}" y2="${y(d.income)}" stroke="var(--fg)" stroke-width="2.5" stroke-linecap="round"><title>${esc(monthName(d.k))}: income ${esc(money(d.income))}</title></line>`;
+      s += `<text x="${cx}" y="${H-10}" text-anchor="middle" class="${d.k === view ? "cur" : ""}">${esc(monthName(d.k,true))}</text>`;
+    });
+    s += `</svg><div class="legend" style="padding:4px 4px 6px"><span><b style="background:var(--ink)"></b>Spent</span><span><b style="background:var(--save)"></b>Saved</span><span><b style="background:var(--fg);height:3px;vertical-align:3px"></b>Income</span></div>`;
+    $("chart").innerHTML = s;
+  }
+  function niceStep(raw){ const p = Math.pow(10, Math.floor(Math.log10(raw || 1))), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+  function esc(t){ return String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+  /* ---------- Setup ---------- */
+  let draft = null, setupDirty = false;
+  function renderSetup(){
+    if (setupDirty) return;
+    $("salaryIn").value = defaultSalary() || "";
+    $("currencyIn").value = cur();
+    draft = cats().map(c => ({...c}));
+    drawCatEdit();
+    if (!S.settings || !defaultSalary()) $("setup").open = true;
+  }
+  function drawCatEdit(){
+    const box = $("catEdit"); box.textContent = "";
+    draft.forEach((c, i) => {
+      const row = el("div","catedit");
+      const n = el("input"); n.value = c.name; n.id = "catName-" + c.id; n.setAttribute("aria-label","Category name"); n.oninput = () => { c.name = n.value; setupDirty = true; };
+      const b = el("input","num"); b.value = c.budget || ""; b.placeholder = "0"; b.inputMode = "decimal"; b.id = "catBud-" + c.id; b.setAttribute("aria-label", "Monthly budget for " + c.name); b.oninput = () => { c.budget = parseAmt(b.value) || 0; setupDirty = true; };
+      const sv = el("label","sv"); const cb = el("input"); cb.type = "checkbox"; cb.checked = !!c.save; cb.onchange = () => { c.save = cb.checked; setupDirty = true; }; sv.append(cb, "saving");
+      const x = el("button","x","✕"); x.type = "button"; x.setAttribute("aria-label","Remove " + c.name);
+      x.onclick = () => { draft.splice(i,1); setupDirty = true; drawCatEdit(); };
+      row.append(n, b, sv, x); box.append(row);
+    });
+  }
+  $("addCat").onclick = () => { draft.push({id:"c" + newId(), name:"", budget:0, save:false}); setupDirty = true; drawCatEdit(); $("catEdit").lastChild.querySelector("input").focus(); };
+  ["salaryIn","currencyIn"].forEach(id => $(id).addEventListener("input", () => { setupDirty = true; }));
+  $("saveSetup").onclick = async () => {
+    const salary = parseAmt($("salaryIn").value || 0);
+    if (!(salary >= 0)){ $("setupMsg").textContent = "Enter your salary as a number, like 5200."; return; }
+    const categories = draft.filter(c => c.name.trim()).map(c => ({id:c.id, name:c.name.trim(), budget:+c.budget || 0, save:!!c.save}));
+    if (!categories.length){ $("setupMsg").textContent = "Keep at least one category."; return; }
+    const ok = await write(() => store.set("settings","main",{salary, currency:$("currencyIn").value, categories, startMonth:(S.settings && S.settings.startMonth) || monthKey(new Date()), updatedAt:Date.now()}));
+    if (ok){ setupDirty = false; $("setupMsg").textContent = ""; toast("Setup saved"); renderAll(); }
+  };
+
+  /* ---------- Month salary override ---------- */
+  $("salaryMonthSave").onclick = async () => {
+    const v = parseAmt($("salaryMonthIn").value);
+    if (!(v >= 0)) return;
+    if (await write(() => store.set("months", view, {salary:v}))){ $("salaryEdit").hidden = true; toast(monthName(view) + " salary set to " + money(v)); }
+  };
+  $("salaryMonthReset").onclick = async () => { if (await write(() => store.del("months", view))){ $("salaryEdit").hidden = true; toast("Using your usual salary for " + monthName(view)); } };
+
+  /* ---------- Forms ---------- */
+  function defaultDate(){ return view === monthKey(new Date()) ? todayISO() : view + "-01"; }
+  $("spendForm").onsubmit = async e => {
+    e.preventDefault();
+    const amount = parseAmt($("amt").value), date = $("date").value;
+    if (!(amount > 0)){ $("amt").focus(); notice("Enter an amount above zero."); return; }
+    notice("");
+    const body = {amount, label:$("what").value.trim(), cat:pickedCat, date, month:date.slice(0,7), at:Date.now()};
+    const id = newId();
+    if (await write(() => store.set("spends", id, body))){
+      $("amt").value = ""; $("what").value = ""; $("amt").focus();
+      if (body.month !== view){ view = body.month; renderAll(); }
+      toast("Added " + money(amount) + " · " + catById(pickedCat).name, () => write(() => store.del("spends", id)));
+    }
+  };
+  $("incomeForm").onsubmit = async e => {
+    e.preventDefault();
+    const amount = parseAmt($("incAmt").value), date = $("incDate").value;
+    if (!(amount > 0)){ $("incAmt").focus(); return; }
+    const id = newId(), body = {amount, label:$("incWhat").value.trim() || "Other income", date, month:date.slice(0,7), at:Date.now()};
+    if (await write(() => store.set("income", id, body))){ $("incAmt").value = ""; $("incWhat").value = ""; toast("Added " + money(amount) + " income", () => write(() => store.del("income", id))); }
+  };
+  $("toIncome").onclick = () => { $("spendForm").hidden = true; $("incomeForm").hidden = false; $("toIncome").hidden = true; $("incAmt").focus(); };
+  $("toSpend").onclick = () => { $("spendForm").hidden = false; $("incomeForm").hidden = true; $("toIncome").hidden = false; };
+
+  function go(n){ view = shiftMonth(view, n); $("date").value = defaultDate(); $("incDate").value = defaultDate(); $("salaryEdit").hidden = true; renderAll(); }
+  $("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
+
+  /* ---------- Export ---------- */
+  $("exportBtn").onclick = async () => {
+    const q = v => { const t = String(v ?? ""); return /[",\n]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t; };
+    const rows = [["Date","Type","Category","Description","Amount (" + cur() + ")"]];
+    S.spends.filter(s => s.month === view).forEach(s => rows.push([s.date, catById(s.cat).save ? "Saving" : "Spending", catById(s.cat).name, s.label, s.amount.toFixed(2)]));
+    S.income.filter(i => i.month === view).forEach(i => rows.push([i.date, "Income", "", i.label, i.amount.toFixed(2)]));
+    rows.splice(1, 0, [view + "-01", "Income", "", "Take-home salary", salaryFor(view).toFixed(2)]);
+    const filename = "payday-ledger-" + view + ".csv";
+    try { await downloads.save({filename, data: rows.map(r => r.map(q).join(",")).join("\r\n")}); }
+    catch(e){ if (e && e.code !== "declined") notice("Couldn't download the file. Try again in a moment."); }
+  };
+
+  /* ---------- Boot ---------- */
+  async function boot(){
+    $("date").value = defaultDate(); $("incDate").value = defaultDate();
+    renderAll();
+    let db = null, user = null;
+    if (window.claude && window.claude.use){
+      [db, user, downloads] = await Promise.all([claude.use("db"), claude.use("user"), claude.use("downloads")]);
+    }
+    if (db){
+      store = dbStore(db); store.kind = "db";
+      try { if (user && user.can && (await user.can("data.write")) === false){ writable = false; notice("This tracker is private. Only its owner and editors can see and change the numbers."); } } catch(e){}
+      $("status").textContent = "Saved to your claude.ai account · syncs across devices";
+      store.start(() => { $("status").textContent = "Connection lost · reload the page"; });
+    } else {
+      store = localStore(); store.kind = "local";
+      $("status").textContent = window.claude ? "Saved in this browser only (sign in to sync)" : "Saved in this browser only";
+      store.start();
+    }
+  }
+  boot();
+})();
+</script>

@@ -6,6 +6,8 @@ with its own client/server, README, and Dockerfile.
 - **[PlanSync](#plansync)** (`client/`, `server/`) — an activity-based matching dating app.
 - **[NFL Week Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for a full
   NFL week's scores, stat leaders, and touchdown scorers.
+- **[Payday Ledger](salary/README.md)** (`salary/`) — a monthly salary spending tracker with
+  budgets by category, a daily allowance and a six-month trend.
 
 ---
 

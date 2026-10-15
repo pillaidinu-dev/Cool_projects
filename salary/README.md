@@ -11,7 +11,8 @@ Live tracker: https://claude.ai/artifact/XPkfUnnkabyQoFbXWKVAkc (private: only t
 - **Other income**: bonuses, refunds and side income are added to that month's income.
 - **Daily allowance**: what's left divided by the days remaining in the current month.
 - **Budget by category**: spent against budget, marked when a category is near or over its limit.
-- **Entries by day** with delete and undo, **CSV download** per month, and a **six-month trend** of spent and saved against income.
+- **Fixing mistakes**: every entry has Edit (amount, description, category, date) and Delete, both with undo. Tap a category under Budget by category to see its entries and change its monthly budget.
+- **Entries by day**, **CSV download** per month, and a **six-month trend** of spent and saved against income.
 
 ## Files
 

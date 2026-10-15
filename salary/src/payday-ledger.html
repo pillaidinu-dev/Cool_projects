@@ -104,12 +104,23 @@ section{display:flex;flex-direction:column;gap:12px}
 .cat .fig small{color:var(--muted)}
 .cat .bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
 .cat .bar i{display:block;height:100%;background:var(--ink);border-radius:99px}
+.cat-btn{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;width:100%;cursor:pointer}
+.cat-btn:focus-visible{outline:3px solid var(--ink);outline-offset:4px;border-radius:4px}
+.cat .nm .chev{color:var(--muted);font-size:.8rem;transition:transform .2s}
+.cat-btn[aria-expanded="true"] .nm .chev{transform:rotate(90deg)}
+.cat-open{grid-column:1/-1;display:flex;flex-direction:column;margin:8px -16px -11px;border-top:1px dashed var(--rule);background:color-mix(in srgb,var(--sunk) 45%,var(--paper))}
+.cat-open .entry{border-top:1px solid var(--line)}
+.cat-open .entry:first-child{border-top:0}
+.budrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line);font-size:.85rem}
+.budrow input{width:8em;padding:7px 9px}
+.budrow .btn{padding:7px 12px}
+.cat-open .none{padding:10px 16px;color:var(--muted);font-size:.85rem}
 .cat.warn .bar i{background:var(--warn)} .cat.over .bar i{background:var(--bad)} .cat.saving .bar i{background:var(--save)}
 
 /* Entries */
 .day{display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .day-h{display:flex;justify-content:space-between;padding:7px 16px;background:var(--sunk);font-size:.8rem;font-weight:600;color:var(--muted)}
-.entry{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--line)}
+.entry{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--line)}
 .day-h + .entry{border-top:0}
 .entry .t{min-width:0;overflow-wrap:anywhere}
 .entry .t small{display:block;color:var(--muted);font-size:.78rem}
@@ -117,6 +128,11 @@ section{display:flex;flex-direction:column;gap:12px}
 .entry.inc .a{color:var(--good)}
 .x{width:30px;height:30px;border-radius:8px;color:var(--muted);font-size:1rem}
 .x:hover{background:var(--sunk);color:var(--bad)}
+.ed{height:30px;border-radius:8px;color:var(--ink);font-size:.8rem;font-weight:600;padding:0 8px}
+.ed:hover{background:var(--ink-soft)}
+.editform{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:var(--ink-soft)}
+.editform .field label{color:var(--fg)}
+.editform .acts{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
 .x.armed{background:var(--bad);color:var(--paper);width:auto;padding:0 10px;font-size:.78rem;font-weight:700}
 .empty{background:var(--paper);border:1px dashed var(--rule);border-radius:var(--r);padding:18px 16px;color:var(--muted);font-size:.9rem}
 
@@ -134,7 +150,7 @@ details.card > summary{cursor:pointer;font-family:var(--display);font-weight:700
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:10px;padding:10px 14px;display:flex;gap:14px;align-items:center;font-size:.88rem;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px);z-index:20}
 .toast button{color:var(--bg);font-weight:700;text-decoration:underline}
 @media (max-width:480px){
-  .grid2{grid-template-columns:1fr}
+  .grid2,.editform{grid-template-columns:1fr}
   .catedit{grid-template-columns:minmax(0,1fr) 5.5em auto auto;gap:6px}
   .row.total .amt{font-size:1.35rem}
 }
@@ -264,6 +280,9 @@ details.card > summary{cursor:pointer;font-family:var(--display);font-weight:700
   let store = null, downloads = null, writable = true;
   let view = monthKey(new Date());
   let pickedCat = null;
+  let editing = null;   // {id, where: "list"|"cat", draft:{amount,label,cat,date}} — one entry edited at a time
+  let openCat = null;   // category expanded in Budget by category
+  let budEdit = null;   // {id, value} while changing one category's budget
 
   /* ---------- Helpers ---------- */
   function monthKey(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
@@ -407,8 +426,11 @@ details.card > summary{cursor:pointer;font-family:var(--display);font-weight:700
     const list = cats().slice().sort((a,b) => (t.byCat[b.id]||0) - (t.byCat[a.id]||0) || (b.budget||0) - (a.budget||0));
     for (const c of list){
       const spent = t.byCat[c.id] || 0, budget = +c.budget || 0; budgetSum += budget;
-      if (!spent && !budget) continue;
-      const r = el("div","cat"), nm = el("div","nm"); nm.append(el("span",null,c.name));
+      if (!spent && !budget && openCat !== c.id) continue;
+      const r = el("div","cat"), btn = el("button","cat-btn"), nm = el("div","nm");
+      btn.type = "button"; btn.setAttribute("aria-expanded", openCat === c.id);
+      btn.onclick = () => { openCat = openCat === c.id ? null : c.id; budEdit = null; if (editing && editing.where === "cat") editing = null; renderCats(); };
+      nm.append(el("span","chev","▸"), el("span",null,c.name));
       let cls = "", pill = null;
       if (c.save){ cls = "saving"; if (budget) pill = spent >= budget ? ["ok","Goal met"] : ["warn", money(budget-spent,true) + " to go"]; }
       else if (budget){ const p = spent / budget; cls = p >= 1 ? "over" : p >= .85 ? "warn" : ""; pill = p > 1 ? ["over", money(spent-budget,true) + " over"] : p >= .85 ? ["warn", money(budget-spent,true) + " left"] : ["ok", money(budget-spent,true) + " left"]; }
@@ -416,7 +438,9 @@ details.card > summary{cursor:pointer;font-family:var(--display);font-weight:700
       if (pill){ const p = el("span","pill " + pill[0], pill[1]); nm.append(p); }
       const fig = el("div","fig"); fig.append(money(spent)); if (budget){ fig.append(el("small",null," / " + money(budget,true))); }
       const bar = el("div","bar"), i = el("i"); i.style.width = Math.min(100, budget ? spent/budget*100 : (t.spent+t.saved ? spent/(t.spent+t.saved)*100 : 0)) + "%"; bar.append(i);
-      r.append(nm, fig, bar); box.append(r);
+      btn.append(nm, fig, bar); r.append(btn);
+      if (openCat === c.id) r.append(catDetail(c));
+      box.append(r);
     }
     if (!box.children.length){ box.className = "empty"; box.textContent = "Nothing spent in " + monthName(view) + " yet. Set monthly budgets in Salary & budget setup to see how each category is tracking."; }
     else box.className = "cats";
@@ -442,19 +466,102 @@ details.card > summary{cursor:pointer;font-family:var(--display);font-weight:700
         const h = el("div","day-h"); h.append(el("span",null,new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})), el("span","num",dayTotal ? money(dayTotal) : ""));
         card.append(h); wrap.append(card);
       }
-      const e = el("div","entry" + (r.kind === "inc" ? " inc" : "")), t = el("div","t");
-      const c = r.kind === "inc" ? null : catById(r.cat);
-      t.append(el("span",null, r.label || (c ? c.name : "Income")), el("small",null, r.kind === "inc" ? "Income" : c.name));
-      const a = el("span","a", (r.kind === "inc" ? "+ " : "") + money(r.amount));
-      const x = el("button","x","✕"); x.setAttribute("aria-label","Delete " + (r.label || "entry"));
-      const col = r.kind === "inc" ? "income" : "spends";
-      armDelete(x, async () => {
-        const {id, kind, ...body} = r;
-        if (await write(() => store.del(col, id))) toast("Deleted " + money(r.amount) + (r.label ? " · " + r.label : ""), () => write(() => store.set(col, id, body)));
-      });
-      e.append(t, a, x); card.append(e);
+      card.append(entryRow(r, "list"));
     }
     box.append(wrap);
+  }
+
+  /* One entry row with Edit and Delete, or its edit form while it is being edited. */
+  function entryRow(r, where){
+    const col = r.kind === "inc" ? "income" : "spends";
+    if (editing && editing.id === r.id && editing.where === where) return editForm(r, col);
+    const e = el("div","entry" + (r.kind === "inc" ? " inc" : "")), t = el("div","t");
+    const c = r.kind === "inc" ? null : catById(r.cat);
+    const sub = r.kind === "inc" ? "Income" : where === "cat" ? new Date(r.date + "T00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}) : c.name;
+    t.append(el("span",null, r.label || (c ? c.name : "Income")), el("small",null, sub));
+    const a = el("span","a", (r.kind === "inc" ? "+ " : "") + money(r.amount));
+    const ed = el("button","ed","Edit"); ed.setAttribute("aria-label","Edit " + (r.label || "entry"));
+    ed.onclick = () => { editing = {id:r.id, where, draft:{amount:String(r.amount), label:r.label || "", cat:r.cat, date:r.date}}; renderCats(); renderEntries(); const f = $("ed-amt"); if (f){ f.focus(); f.select(); } };
+    const x = el("button","x","✕"); x.setAttribute("aria-label","Delete " + (r.label || "entry"));
+    armDelete(x, async () => {
+      const {id, kind, ...body} = r;
+      if (await write(() => store.del(col, id))) toast("Deleted " + money(r.amount) + (r.label ? " · " + r.label : ""), () => write(() => store.set(col, id, body)));
+    });
+    e.append(t, a, ed, x); return e;
+  }
+
+  function editForm(r, col){
+    const d = editing.draft, f = el("form","editform"); f.autocomplete = "off";
+    const field = (label, input) => { const w = el("div","field"), l = el("label",null,label); l.htmlFor = input.id; w.append(l, input); return w; };
+    const amt = el("input","amt-in"); amt.id = "ed-amt"; amt.inputMode = "decimal"; amt.value = d.amount; amt.oninput = () => { d.amount = amt.value; };
+    const lab = el("input"); lab.id = "ed-label"; lab.maxLength = 80; lab.value = d.label; lab.placeholder = r.kind === "inc" ? "Source" : "What for"; lab.oninput = () => { d.label = lab.value; };
+    const dt = el("input"); dt.id = "ed-date"; dt.type = "date"; dt.value = d.date; dt.oninput = () => { d.date = dt.value; };
+    f.append(field("Amount", amt), field(r.kind === "inc" ? "Source" : "What for", lab));
+    if (r.kind !== "inc"){
+      const sel = el("select"); sel.id = "ed-cat";
+      for (const c of cats()){ const o = el("option",null,c.name); o.value = c.id; sel.append(o); }
+      if (!cats().some(c => c.id === d.cat)){ const o = el("option",null,catById(d.cat).name); o.value = d.cat; sel.append(o); }
+      sel.value = d.cat; sel.onchange = () => { d.cat = sel.value; };
+      f.append(field("Category", sel));
+    }
+    f.append(field("Date", dt));
+    const acts = el("div","acts"), save = el("button","btn","Save changes"), cancel = el("button","btn ghost","Cancel");
+    save.type = "submit"; cancel.type = "button";
+    cancel.onclick = () => { editing = null; renderCats(); renderEntries(); };
+    acts.append(save, cancel); f.append(acts);
+    f.onsubmit = async e => {
+      e.preventDefault();
+      const amount = parseAmt(d.amount);
+      if (!(amount > 0)){ notice("Enter an amount above zero."); amt.focus(); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date)){ notice("Pick a date for this entry."); dt.focus(); return; }
+      notice("");
+      const {id, kind, ...old} = r;
+      const body = {...old, amount, label: d.label.trim() || (kind === "inc" ? "Other income" : ""), date: d.date, month: d.date.slice(0,7)};
+      if (kind !== "inc") body.cat = d.cat;
+      if (await write(() => store.set(col, id, body))){
+        editing = null; renderAll();
+        const moved = body.month !== view ? " · moved to " + monthName(body.month) : "";
+        toast("Updated to " + money(amount) + moved, () => write(() => store.set(col, id, old)));
+      }
+    };
+    f.onkeydown = e => { if (e.key === "Escape"){ editing = null; renderCats(); renderEntries(); } };
+    return f;
+  }
+
+  /* Expanded category: its entries this month, and its monthly budget. */
+  function catDetail(c){
+    const box = el("div","cat-open");
+    const rows = S.spends.filter(s => s.month === view && catById(s.cat).id === c.id)
+      .map(s => ({...s, kind:"spend"})).sort((a,b) => b.date.localeCompare(a.date) || (b.at||0) - (a.at||0));
+    if (!rows.length) box.append(el("div","none","No entries in " + c.name + " for " + monthName(view) + "."));
+    for (const r of rows) box.append(entryRow(r, "cat"));
+    const br = el("div","budrow");
+    if (budEdit && budEdit.id === c.id){
+      const inp = el("input","num"); inp.id = "bud-in"; inp.inputMode = "decimal"; inp.value = budEdit.value; inp.placeholder = "0";
+      inp.setAttribute("aria-label","Monthly budget for " + c.name); inp.oninput = () => { budEdit.value = inp.value; };
+      const save = el("button","btn","Save budget"), cancel = el("button","link","Cancel");
+      const doSave = async () => {
+        const v = budEdit.value.trim() === "" ? 0 : parseAmt(budEdit.value);
+        if (!(v >= 0)){ notice("Enter the budget as a number, like 400. Use 0 for no limit."); return; }
+        notice("");
+        const categories = cats().map(x => x.id === c.id ? {...x, budget:v} : {...x});
+        if (await saveSettings({categories})){ budEdit = null; renderAll(); toast(c.name + " budget set to " + (v ? money(v,true) + " a month" : "no limit")); }
+      };
+      save.onclick = doSave; inp.onkeydown = e => { if (e.key === "Enter") doSave(); if (e.key === "Escape"){ budEdit = null; renderCats(); } };
+      cancel.onclick = () => { budEdit = null; renderCats(); };
+      br.append(el("span",null,"Monthly budget"), inp, save, cancel);
+    } else {
+      const b = el("button","link", c.budget ? "Change budget" : "Set a budget");
+      b.onclick = () => { budEdit = {id:c.id, value: c.budget ? String(c.budget) : ""}; renderCats(); const i = $("bud-in"); if (i){ i.focus(); i.select(); } };
+      br.append(el("span","muted", c.budget ? "Budget " + money(c.budget,true) + " a month" : "No monthly limit"), b);
+    }
+    box.append(br);
+    return box;
+  }
+
+  function saveSettings(patch){
+    const base = S.settings || {salary:0, currency:cur(), categories:cats(), startMonth:monthKey(new Date())};
+    return write(() => store.set("settings","main",{...base, categories: base.categories || cats(), ...patch, updatedAt:Date.now()}));
   }
 
   function renderChart(){

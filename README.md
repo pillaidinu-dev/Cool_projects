@@ -8,6 +8,8 @@ with its own client/server, README, and Dockerfile.
   NFL week's scores, stat leaders, and touchdown scorers.
 - **[RGB Light Controller](rgb-controller/README.md)** (`rgb-controller/`) — an Arduino sketch for a
   PIN-locked RGB LED controller with an OLED menu, joystick, keypad and slide pot.
+- **[Paddock Championship](paddock-championship/README.md)** (`paddock-championship/`) — an
+  F1-style drivers' championship tracker for friends racing in an F1 game.
 
 ---
 

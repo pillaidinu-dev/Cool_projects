@@ -1,0 +1,925 @@
+<title>Paddock Championship</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=Titillium+Web:wght@400;600;700&display=swap">
+<style>
+/* Layout: a timing-screen header band, then tabs. Standings reads like the
+   on-screen timing tower beside a points-progression chart, with the classic
+   results matrix (gold/silver/bronze cells, purple fastest lap) below. */
+:root {
+  --bg: #eceef1;
+  --surface: #ffffff;
+  --surface-2: #e2e5ea;
+  --fg: #14161a;
+  --muted: #5b626d;
+  --line: #d2d6dc;
+  --red: #d10a11;
+  --red-fg: #ffffff;
+  --band: #15171b;
+  --band-fg: #f3f4f6;
+  --band-muted: #a3a9b3;
+  --gold-bg: #f4d75a;   --gold-fg: #3b2f00;
+  --silver-bg: #d5d9df; --silver-fg: #23272d;
+  --bronze-bg: #e6b083; --bronze-fg: #3d2108;
+  --pts-bg: #cdebd5;    --pts-fg: #134425;
+  --nopts-bg: #e9e2f3;  --nopts-fg: #3b3150;
+  --dnf-bg: #f6cfd6;    --dnf-fg: #6b0f22;
+  --purple: #8a2be2;
+  --focus: #1f6feb;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Titillium Web", "Segoe UI", system-ui, sans-serif;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1013; --surface: #171a1f; --surface-2: #21252c; --fg: #f1f3f6; --muted: #9aa2ad;
+    --line: #2b3038; --red: #ff2b31; --red-fg: #14161a; --band: #07080a; --band-fg: #f3f4f6; --band-muted: #8e95a0;
+    --gold-bg: #6b5600; --gold-fg: #ffe98a; --silver-bg: #4a515b; --silver-fg: #eef1f5;
+    --bronze-bg: #6a3c18; --bronze-fg: #ffd2ac; --pts-bg: #173d27; --pts-fg: #a9e8bf;
+    --nopts-bg: #2c2540; --nopts-fg: #d6c9f2; --dnf-bg: #4a1522; --dnf-fg: #ffb9c7;
+    --purple: #b57bff; --focus: #6aa8ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1013; --surface: #171a1f; --surface-2: #21252c; --fg: #f1f3f6; --muted: #9aa2ad;
+  --line: #2b3038; --red: #ff2b31; --red-fg: #14161a; --band: #07080a; --band-fg: #f3f4f6; --band-muted: #8e95a0;
+  --gold-bg: #6b5600; --gold-fg: #ffe98a; --silver-bg: #4a515b; --silver-fg: #eef1f5;
+  --bronze-bg: #6a3c18; --bronze-fg: #ffd2ac; --pts-bg: #173d27; --pts-fg: #a9e8bf;
+  --nopts-bg: #2c2540; --nopts-fg: #d6c9f2; --dnf-bg: #4a1522; --dnf-fg: #ffb9c7;
+  --purple: #b57bff; --focus: #6aa8ff; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Header band */
+.band { background: var(--band); color: var(--band-fg); position: relative; }
+.band::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px;
+  background: repeating-conic-gradient(var(--band-fg) 0 25%, var(--band) 0 50%) 0 0 / 12px 12px; opacity: .85; }
+.band .wrap { padding-block: 22px 30px; display: flex; flex-wrap: wrap; gap: 18px 32px; align-items: end; justify-content: space-between; }
+.eyebrow { font-family: var(--font-display); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 13px; color: var(--band-muted); display: flex; gap: 10px; align-items: center; }
+.eyebrow .flag { width: 22px; height: 4px; background: var(--red); display: inline-block; transform: skewX(-20deg); }
+h1 { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: clamp(34px, 6vw, 56px); line-height: .95; margin: 6px 0 0; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+#season-name { background: none; border: 0; padding: 0; text-align: left; cursor: text; }
+#season-name[disabled] { cursor: default; }
+.leader { display: flex; gap: 22px; flex-wrap: wrap; }
+.stat { min-width: 0; }
+.stat .k { font-family: var(--font-display); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; color: var(--band-muted); }
+.stat .v { font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.stat .v small { font-size: 15px; font-weight: 700; color: var(--band-muted); margin-left: 4px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: 18px; overflow-x: auto; }
+.tab { background: none; border: 0; padding: 10px 14px 9px; font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--red); }
+.tab:hover { color: var(--fg); }
+main { padding-block: 22px 60px; }
+section[role="tabpanel"] { display: grid; gap: 22px; }
+
+.note { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 14px; border-radius: var(--radius); background: var(--surface-2); color: var(--fg); font-size: 14px; }
+.note strong { font-family: var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; min-width: 0; }
+h2 { font-family: var(--font-display); font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: .03em; font-size: 24px; line-height: 1.1; margin: 0 0 12px; }
+h3 { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: 14px; color: var(--muted); margin: 0 0 8px; }
+.muted { color: var(--muted); }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 22px; align-items: start; }
+@media (max-width: 860px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* Timing tower */
+.tower { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.tower li { display: grid; grid-template-columns: 34px 5px minmax(0, 1fr) auto 64px; align-items: center; gap: 10px; background: var(--surface-2); border-radius: 4px; padding: 6px 10px 6px 0; min-height: 44px; }
+.tower .pos { font-family: var(--font-display); font-weight: 800; font-size: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+.tower li:first-child .pos { color: var(--red); }
+.tower .stripe { align-self: stretch; border-radius: 2px; }
+.tower .who { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
+.tower .code { font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: .04em; }
+.tower .name { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tower .pts { font-family: var(--font-display); font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; text-align: right; }
+.tower .pts small { font-size: 12px; color: var(--muted); font-weight: 700; margin-left: 2px; letter-spacing: .08em; }
+.tower .gap { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; text-align: right; font-weight: 600; }
+.tower .meta { grid-column: 3 / -1; display: flex; gap: 12px; font-size: 12px; color: var(--muted); margin-top: -4px; font-variant-numeric: tabular-nums; }
+
+/* Chart */
+.chart svg { width: 100%; height: auto; display: block; }
+.chart .axis text { fill: var(--muted); font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: .06em; }
+.chart .grid line { stroke: var(--line); stroke-width: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 4px; border-radius: 2px; display: inline-block; }
+
+/* Results matrix */
+.scroll { overflow-x: auto; }
+table.matrix { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; }
+.matrix th { font-family: var(--font-display); font-weight: 700; letter-spacing: .06em; font-size: 13px; color: var(--muted); padding: 4px 6px; text-transform: uppercase; white-space: nowrap; }
+.matrix th.drv { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; }
+.matrix td.drv { position: sticky; left: 0; background: var(--surface); white-space: nowrap; font-weight: 700; padding-right: 10px; z-index: 1; }
+.matrix td.drv i { display: inline-block; width: 4px; height: 16px; border-radius: 2px; vertical-align: -3px; margin-right: 8px; }
+.matrix td.cell { width: 42px; min-width: 42px; height: 32px; text-align: center; border-radius: 3px; font-weight: 700; font-size: 14px; position: relative; background: var(--surface-2); color: var(--muted); }
+.matrix td.p1 { background: var(--gold-bg); color: var(--gold-fg); }
+.matrix td.p2 { background: var(--silver-bg); color: var(--silver-fg); }
+.matrix td.p3 { background: var(--bronze-bg); color: var(--bronze-fg); }
+.matrix td.pts { background: var(--pts-bg); color: var(--pts-fg); }
+.matrix td.nopts { background: var(--nopts-bg); color: var(--nopts-fg); }
+.matrix td.dnf { background: var(--dnf-bg); color: var(--dnf-fg); font-size: 11px; letter-spacing: .04em; }
+.matrix td.fl::after { content: ""; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--purple); }
+.matrix td.total { font-family: var(--font-display); font-weight: 800; font-size: 17px; padding: 0 8px; text-align: right; }
+.sprint-tag { display: inline-block; background: var(--red); color: var(--red-fg); border-radius: 2px; font-size: 10px; padding: 0 3px; margin-left: 3px; letter-spacing: .04em; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key b { width: 16px; height: 12px; border-radius: 2px; display: inline-block; position: relative; }
+.key b.fl { background: var(--surface-2); }
+.key b.fl::after { content: ""; position: absolute; top: 2px; left: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--purple); }
+
+/* Buttons and forms */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: var(--radius); cursor: pointer; font-weight: 700; min-height: 40px; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--red); border-color: var(--red); color: var(--red-fg); font-family: var(--font-display); letter-spacing: .08em; text-transform: uppercase; font-size: 16px; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--red); }
+.btn.small { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.linkish { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-weight: 700; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label, .field .lbl { font-family: var(--font-display); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: 12px; color: var(--muted); }
+.field input, .field select { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; min-height: 40px; width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 8px 14px; cursor: pointer; font-weight: 700; min-height: 40px; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+.swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--fg); }
+
+/* Race form: one row per friend with their finishing position */
+.entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.entries li { display: grid; grid-template-columns: 5px minmax(0, 1fr) 132px 40px 64px; gap: 10px; align-items: center; background: var(--surface-2); border-radius: 4px; padding: 6px 10px 6px 0; min-height: 52px; }
+.entries li.clash { box-shadow: inset 0 0 0 2px var(--red); }
+.entries .stripe { align-self: stretch; border-radius: 2px; }
+.entries .nm { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
+.entries .nm b { font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: .04em; }
+.entries .nm span { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entries select { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; min-height: 40px; width: 100%; font-weight: 700; font-variant-numeric: tabular-nums; }
+.entries .epts { font-family: var(--font-display); font-weight: 800; font-size: 20px; text-align: right; font-variant-numeric: tabular-nums; }
+.entries .epts small { font-size: 11px; color: var(--muted); margin-left: 2px; letter-spacing: .08em; }
+.entries .clash-msg { grid-column: 2 / -1; color: var(--red); font-size: 13px; font-weight: 600; margin-top: -4px; }
+@media (max-width: 520px) {
+  .entries li { grid-template-columns: 5px minmax(0, 1fr) 40px 56px; }
+  .entries .sel { grid-column: 2 / 4; grid-row: 2; }
+  .entries .flcell { grid-column: 3; grid-row: 1; }
+  .entries .epts { grid-column: 4; grid-row: 1 / 3; }
+}
+.icon-btn { width: 36px; height: 36px; border: 1px solid transparent; background: transparent; border-radius: 4px; cursor: pointer; font-weight: 700; color: var(--muted); font-size: 16px; }
+.icon-btn:hover:not([disabled]) { background: var(--surface); color: var(--fg); }
+.icon-btn[disabled] { opacity: .3; cursor: not-allowed; }
+.icon-btn.fl-on { color: var(--purple); border-color: var(--purple); }
+
+/* Dry-run preview inside the race form */
+.dry { margin-top: 18px; border: 1px dashed var(--line); border-radius: var(--radius); padding: 14px; display: grid; gap: 10px; }
+.dry-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; justify-content: space-between; }
+.dry-head p { margin: 0; font-size: 13px; color: var(--muted); }
+.dry table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.dry th { font-family: var(--font-display); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; color: var(--muted); text-align: right; padding: 4px 8px; }
+.dry th:nth-child(-n+2) { text-align: left; }
+.dry td { padding: 6px 8px; border-top: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.dry td:nth-child(-n+2) { text-align: left; }
+.dry td.p { font-family: var(--font-display); font-weight: 800; font-size: 18px; width: 64px; }
+.dry td.d i { display: inline-block; width: 4px; height: 14px; border-radius: 2px; vertical-align: -2px; margin-right: 8px; }
+.dry .up { color: var(--pts-fg); background: var(--pts-bg); border-radius: 3px; padding: 0 4px; font-size: 12px; margin-left: 4px; }
+.dry .down { color: var(--dnf-fg); background: var(--dnf-bg); border-radius: 3px; padding: 0 4px; font-size: 12px; margin-left: 4px; }
+.dry .gain { font-weight: 700; }
+.dry .after { font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+
+/* Lists */
+.races { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.races li { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; background: var(--surface-2); border-radius: 4px; }
+.races .rnd { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--muted); }
+.races .rname { font-weight: 700; }
+.races .rsub { font-size: 13px; color: var(--muted); }
+.podium { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.podium span { white-space: nowrap; }
+.drivers { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.drivers li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; background: var(--surface-2); border-radius: 4px; border-left: 5px solid var(--c); }
+.drivers .num { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: 30px; line-height: 1; color: var(--c); text-align: center; }
+.drivers .dn { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drivers .dc { font-family: var(--font-display); letter-spacing: .08em; color: var(--muted); font-weight: 700; font-size: 13px; }
+.empty { text-align: left; padding: 26px; display: grid; gap: 12px; justify-items: start; }
+.empty p { margin: 0; max-width: 60ch; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: var(--radius); font-weight: 600; max-width: calc(100% - 32px); z-index: 20; }
+.points-table { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .tower li { transition: transform .25s ease; } }
+</style>
+
+<header class="band">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow"><span class="flag"></span><span id="eyebrow">Drivers' Championship</span></div>
+      <h1><button id="season-name" type="button" title="Rename season">Friends Championship</button></h1>
+    </div>
+    <div class="leader" id="leader"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="tab-standings" aria-controls="standings" aria-selected="true">Standings</button>
+    <button class="tab" role="tab" id="tab-races" aria-controls="races" aria-selected="false">Races</button>
+    <button class="tab" role="tab" id="tab-grid" aria-controls="grid" aria-selected="false">Drivers</button>
+  </nav>
+
+  <main>
+    <div id="banner"></div>
+
+    <section role="tabpanel" id="standings" aria-labelledby="tab-standings">
+      <div id="standings-body"></div>
+    </section>
+
+    <section role="tabpanel" id="races" aria-labelledby="tab-races" hidden>
+      <div class="panel" id="race-form-panel" hidden>
+        <h2 id="race-form-title">Log a race</h2>
+        <form id="race-form" autocomplete="off">
+          <div class="row">
+            <div class="field" style="flex: 2 1 220px">
+              <label for="race-name">Race name</label>
+              <input id="race-name" required maxlength="40" placeholder="e.g. Monaco Grand Prix">
+            </div>
+            <div class="field" style="flex: 1 1 150px">
+              <label for="race-date">Date</label>
+              <input id="race-date" type="date" required>
+            </div>
+            <div class="field">
+              <span class="lbl" id="race-type-lbl">Session</span>
+              <div class="seg" role="group" aria-labelledby="race-type-lbl">
+                <button type="button" id="type-gp" aria-pressed="true">Grand Prix</button>
+                <button type="button" id="type-sprint" aria-pressed="false">Sprint</button>
+              </div>
+            </div>
+          </div>
+          <p class="points-table" id="points-hint"></p>
+          <h3>Where did each of you finish?</h3>
+          <ul class="entries" id="entries"></ul>
+          <p class="muted" style="font-size:13px;margin:10px 0 0">Pick each friend's position in the full 22-car field. Leave it on "Didn't race" for anyone who sat this one out.</p>
+          <div class="dry" id="race-preview" aria-live="polite"></div>
+          <div class="row" style="margin-top:18px;justify-content:space-between">
+            <div class="row">
+              <button class="btn primary" type="submit" id="race-save">Save race</button>
+              <button class="btn" type="button" id="race-clear">Clear fields</button>
+              <button class="btn" type="button" id="race-cancel">Cancel</button>
+            </div>
+            <button class="btn danger" type="button" id="race-delete" hidden>Delete race</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;margin-bottom:12px">
+          <h2 style="margin:0">Calendar</h2>
+          <button class="btn primary" type="button" id="race-new">+ Log a race</button>
+        </div>
+        <div id="race-list"></div>
+      </div>
+    </section>
+
+    <section role="tabpanel" id="grid" aria-labelledby="tab-grid" hidden>
+      <div class="panel" id="driver-form-panel">
+        <h2 id="driver-form-title">Add a driver</h2>
+        <form id="driver-form" autocomplete="off">
+          <div class="row">
+            <div class="field" style="flex: 2 1 200px">
+              <label for="drv-name">Name</label>
+              <input id="drv-name" required maxlength="30" placeholder="Who's racing?">
+            </div>
+            <div class="field" style="flex: 0 1 90px">
+              <label for="drv-code">Code</label>
+              <input id="drv-code" maxlength="3" placeholder="ABC" style="text-transform:uppercase">
+            </div>
+            <div class="field" style="flex: 0 1 90px">
+              <label for="drv-num">Number</label>
+              <input id="drv-num" type="number" min="0" max="99" placeholder="44">
+            </div>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <span class="lbl" id="swatch-lbl">Team colour</span>
+            <div class="swatches" id="swatches" role="group" aria-labelledby="swatch-lbl"></div>
+          </div>
+          <div class="row" style="margin-top:16px;justify-content:space-between">
+            <div class="row">
+              <button class="btn primary" type="submit" id="drv-save">Add driver</button>
+              <button class="btn" type="button" id="drv-cancel" hidden>Cancel</button>
+            </div>
+            <button class="btn danger" type="button" id="drv-delete" hidden>Remove driver</button>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h2>The grid</h2>
+        <div id="driver-list"></div>
+      </div>
+      <div class="panel" id="rules-panel">
+        <h2>Scoring</h2>
+        <p style="margin:0 0 10px">Each friend's position counts in the full 22-car field, AI cars included. Grand Prix: 25, 18, 15, 12, 10, 8, 6, 4, 2, 1 for P1 to P10. Sprint: 8 down to 1 for P1 to P8. Ties are split on countback: most wins, then most second places, and so on.</p>
+        <label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" id="set-fl"> Award 1 point for fastest lap in a Grand Prix (driver must finish in the top 10)</label>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+  const GP_POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+  const SPRINT_POINTS = [8, 7, 6, 5, 4, 3, 2, 1];
+  const GRID_SIZE = 22;  // positions P1-P22 in the game, AI cars included
+  const COLORS = [
+    ["Rosso", "#e8002d"], ["Papaya", "#ff8000"], ["Teal", "#00c8b4"], ["Navy", "#3671c6"],
+    ["Racing green", "#1f8a5f"], ["Pink", "#ff6fb0"], ["Sky", "#4fb6f0"], ["Silver", "#9aa1aa"],
+    ["Lime", "#6fcf2e"], ["Violet", "#8b5cf6"], ["Gold", "#d4a017"], ["Graphite", "#4b5563"],
+  ];
+  const DEFAULT_SETTINGS = { name: "Friends Championship", fastestLap: true };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  const fmtDate = (iso) => { try { return new Date(iso + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); } catch { return iso; } };
+  const codeFor = (name) => (name || "").replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase() || "DRV";
+
+  const live = { drivers: [], races: [], settings: { ...DEFAULT_SETTINGS }, loaded: { drivers: false, races: false } };
+  const ui = {
+    db: null, dbState: "connecting", canWrite: true, example: false,
+    tab: "standings", race: null, driverEdit: null, driverColor: COLORS[0][1], confirm: null,
+  };
+
+  // ---------- Example season (only shown on request; never saved) ----------
+  // Stored race shape: positions {driverId: 1-22} plus dnf [driverId]; drivers in neither didn't race.
+  function splitEntries(entries) {
+    const positions = {}, dnf = [];
+    for (const [id, v] of Object.entries(entries)) { if (v === "DNF") dnf.push(id); else if (v) positions[id] = Number(v); }
+    return { positions, dnf };
+  }
+  // Older races stored a full finishing order in `results`; read either shape.
+  function posOf(race, id) {
+    const p = race.positions?.[id];
+    if (typeof p === "number" && p >= 1) return p;
+    const i = (race.results || []).indexOf(id);
+    return i >= 0 ? i + 1 : null;
+  }
+  const EXAMPLE = (() => {
+    const d = [
+      ["ex1", "Alex", "ALX", 7, "#e8002d"], ["ex2", "Sam", "SAM", 22, "#ff8000"], ["ex3", "Jordan", "JOR", 4, "#00c8b4"],
+      ["ex4", "Priya", "PRI", 16, "#3671c6"], ["ex5", "Chris", "CHR", 33, "#1f8a5f"], ["ex6", "Mei", "MEI", 11, "#ff6fb0"],
+    ].map(([id, name, code, number, color]) => ({ id, name, code, number, color }));
+    // [id, name, date, sprint, {driver: position or "DNF"}, fastest lap]
+    const r = [
+      ["e1", "Bahrain GP", "2026-03-01", false, { ex1: 2, ex2: 1, ex3: 9, ex4: 5, ex5: "DNF", ex6: 14 }, "ex1"],
+      ["e2", "Jeddah Sprint", "2026-03-08", true, { ex1: 1, ex2: 3, ex3: 6, ex4: 11, ex5: 7, ex6: 4 }, null],
+      ["e3", "Jeddah GP", "2026-03-08", false, { ex1: 1, ex2: 4, ex3: 2, ex4: 12, ex5: 8, ex6: 17 }, "ex3"],
+      ["e4", "Melbourne GP", "2026-03-22", false, { ex1: 3, ex2: 6, ex3: "DNF", ex4: 1, ex5: 10, ex6: 7 }, "ex4"],
+      ["e5", "Suzuka GP", "2026-04-05", false, { ex1: 5, ex2: 2, ex3: 13, ex4: 3, ex5: 21, ex6: 9 }, "ex2"],
+    ].map(([id, name, date, sprint, entries, fastestLap]) => ({ id, name, date, sprint, ...splitEntries(entries), fastestLap, createdAt: 0 }));
+    return { drivers: d, races: r, settings: { name: "Example Championship", fastestLap: true } };
+  })();
+  const data = () => (ui.example ? EXAMPLE : live);
+
+  // ---------- Scoring ----------
+  function sortedRaces(races) {
+    return [...races].sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.sprint === b.sprint ? 0 : a.sprint ? -1 : 1) || (a.createdAt || 0) - (b.createdAt || 0));
+  }
+  function pointsFor(race, driverId, settings) {
+    const pos = posOf(race, driverId);
+    if (!pos) return 0;
+    let pts = (race.sprint ? SPRINT_POINTS : GP_POINTS)[pos - 1] || 0;
+    if (!race.sprint && settings.fastestLap && race.fastestLap === driverId && pos <= 10) pts += 1;
+    return pts;
+  }
+  function standings(races = data().races) {
+    const { drivers, settings } = data();
+    const rs = sortedRaces(races);
+    const rows = drivers.map((d) => {
+      let total = 0; const counts = []; let wins = 0, podiums = 0, best = null, starts = 0;
+      const cumulative = [0];
+      for (const r of rs) {
+        total += pointsFor(r, d.id, settings);
+        cumulative.push(total);
+        const pos = posOf(r, d.id), idx = pos ? pos - 1 : -1;
+        if (pos || (r.dnf || []).includes(d.id)) starts++;
+        if (idx >= 0 && !r.sprint) {
+          counts[idx] = (counts[idx] || 0) + 1;
+          if (idx === 0) wins++;
+          if (idx < 3) podiums++;
+          best = best === null ? idx + 1 : Math.min(best, idx + 1);
+        }
+      }
+      return { driver: d, total, counts, wins, podiums, best, starts, cumulative };
+    });
+    rows.sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total;
+      const n = Math.max(a.counts.length, b.counts.length);
+      for (let i = 0; i < n; i++) { const x = a.counts[i] || 0, y = b.counts[i] || 0; if (x !== y) return y - x; }
+      return a.driver.name.localeCompare(b.driver.name);
+    });
+    return { rows, races: rs };
+  }
+
+  // ---------- Rendering ----------
+  function render() {
+    renderHeader();
+    renderBanner();
+    renderStandings();
+    renderRaceList();
+    renderDriverList();
+    renderRaceForm();
+    renderDriverForm();
+    $("set-fl").checked = !!data().settings.fastestLap;
+    $("set-fl").disabled = !editable();
+    $("race-new").hidden = !editable() || data().drivers.length === 0;
+  }
+  const editable = () => ui.canWrite && !ui.example && !!ui.db;
+
+  function renderHeader() {
+    const { settings } = data();
+    const { rows, races } = standings();
+    $("season-name").textContent = settings.name || DEFAULT_SETTINGS.name;
+    $("season-name").disabled = !editable();
+    const gps = races.filter((r) => !r.sprint).length, sprints = races.length - gps;
+    $("eyebrow").textContent = "Drivers' Championship" + (races.length ? ` · ${gps} GP${gps === 1 ? "" : "s"}${sprints ? ` + ${sprints} sprint${sprints === 1 ? "" : "s"}` : ""}` : "");
+    const lead = rows[0], second = rows[1];
+    const stats = [];
+    if (lead && races.length) {
+      stats.push(["Leader", `${esc(lead.driver.name)}`]);
+      stats.push(["Points", `${lead.total}`]);
+      if (second) stats.push(["Lead", `+${lead.total - second.total}<small>over ${esc(second.driver.code)}</small>`]);
+    } else {
+      stats.push(["Drivers", `${data().drivers.length}`]);
+      stats.push(["Races", "0"]);
+    }
+    $("leader").innerHTML = stats.map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  }
+
+  function renderBanner() {
+    let html = "";
+    if (ui.example) {
+      html = `<div class="note"><strong>Example season</strong><span>Made-up drivers and results to show how it works. Nothing here is saved.</span><button class="linkish" data-act="exit-example">Back to our championship</button></div>`;
+    } else if (ui.dbState === "unavailable") {
+      html = `<div class="note"><strong>Offline</strong><span>The shared results can't be reached from this view, so nothing can be loaded or saved. Open the page signed in to claude.ai.</span><button class="linkish" data-act="example">Preview an example season</button></div>`;
+    } else if (!ui.canWrite) {
+      html = `<div class="note"><strong>View only</strong><span>You can follow the standings but not log races. To edit, ask the owner to invite you by email as an Editor from the Share menu. A public link only gives view access.</span></div>`;
+    }
+    $("banner").innerHTML = html;
+    $("banner").hidden = !html;
+  }
+
+  function renderStandings() {
+    const el = $("standings-body");
+    const d = data();
+    if (!ui.example && (!live.loaded.drivers || !live.loaded.races) && ui.dbState !== "unavailable") {
+      el.innerHTML = `<div class="panel empty"><h2>Loading the timing screen…</h2><p class="muted">Fetching drivers and results.</p></div>`;
+      return;
+    }
+    if (d.drivers.length === 0) {
+      el.innerHTML = `<div class="panel empty">
+        <h2>Lights out soon</h2>
+        <p>Start by adding everyone on the grid. Each friend becomes a driver with a code, a number and a team colour. After each race, pick where each of you finished (P1 to P22, AI cars included) and the standings tally themselves with real F1 points.</p>
+        <div class="row">${editable() ? `<button class="btn primary" data-act="goto-grid">Add drivers</button>` : ""}<button class="btn" data-act="example">Preview an example season</button></div>
+      </div>`;
+      return;
+    }
+    const { rows, races } = standings();
+    const leader = rows[0]?.total || 0;
+    const tower = rows.map((r, i) => `
+      <li>
+        <span class="pos">${i + 1}</span>
+        <span class="stripe" style="background:${esc(r.driver.color)}"></span>
+        <span class="who"><span class="code">${esc(r.driver.code)}</span><span class="name">${esc(r.driver.name)}</span></span>
+        <span class="pts">${r.total}<small>PTS</small></span>
+        <span class="gap">${i === 0 ? (races.length ? "Leader" : "") : "−" + (leader - r.total)}</span>
+        ${races.length ? `<span class="meta"><span>${r.wins} win${r.wins === 1 ? "" : "s"}</span><span>${r.podiums} podium${r.podiums === 1 ? "" : "s"}</span><span>${r.best ? "Best P" + r.best : "No GP finish"}</span></span>` : ""}
+      </li>`).join("");
+
+    const noRaces = races.length === 0
+      ? `<div class="panel empty"><h2>No races yet</h2><p>Everyone starts on zero. Log the first race and the chart and results grid fill in.</p>${editable() ? `<button class="btn primary" data-act="new-race">+ Log a race</button>` : ""}</div>`
+      : "";
+
+    el.innerHTML = `
+      <div class="grid-2">
+        <div class="panel"><h2>Standings</h2><ol class="tower">${tower}</ol></div>
+        ${races.length ? `<div class="panel chart"><h2>Points progression</h2>${chartSVG(rows, races)}<div class="legend">${rows.map((r) => `<span><i style="background:${esc(r.driver.color)}"></i>${esc(r.driver.code)}</span>`).join("")}</div></div>` : noRaces}
+      </div>
+      ${races.length ? `<div class="panel"><h2>Results</h2><div class="scroll">${matrixHTML(rows, races)}</div>
+        <div class="key">
+          <span><b style="background:var(--gold-bg)"></b>Winner</span><span><b style="background:var(--silver-bg)"></b>2nd</span>
+          <span><b style="background:var(--bronze-bg)"></b>3rd</span><span><b style="background:var(--pts-bg)"></b>Points finish</span>
+          <span><b style="background:var(--nopts-bg)"></b>No points</span><span><b style="background:var(--dnf-bg)"></b>Did not finish</span>
+          <span><b class="fl"></b>Fastest lap</span><span><span class="sprint-tag">S</span>Sprint</span>
+        </div></div>` : ""}`;
+  }
+
+  function chartSVG(rows, races) {
+    const W = 640, H = 280, L = 40, R = 16, T = 12, B = 30;
+    const n = races.length;
+    const max = Math.max(10, ...rows.map((r) => r.total));
+    const step = niceStep(max / 4);
+    const top = Math.ceil(max / step) * step;
+    const x = (i) => L + (i / n) * (W - L - R);
+    const y = (v) => T + (1 - v / top) * (H - T - B);
+    let grid = "", axis = "";
+    for (let v = 0; v <= top; v += step) {
+      grid += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`;
+      axis += `<text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    }
+    const every = Math.ceil(n / 12);
+    axis += `<text x="${x(0)}" y="${H - 8}" text-anchor="middle">START</text>`;
+    races.forEach((r, i) => {
+      if ((i + 1) % every === 0 || i === n - 1) axis += `<text x="${x(i + 1)}" y="${H - 8}" text-anchor="middle">R${i + 1}${r.sprint ? "S" : ""}</text>`;
+    });
+    // Draw the leader last so it sits on top.
+    const lines = [...rows].reverse().map((r) => {
+      const pts = r.cumulative.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+      const lx = x(n), ly = y(r.total);
+      return `<g><title>${esc(r.driver.name)}: ${r.total} pts</title>
+        <polyline points="${pts}" fill="none" stroke="${esc(r.driver.color)}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${lx}" cy="${ly}" r="4" fill="${esc(r.driver.color)}"/></g>`;
+    }).join("");
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative points after each race"><g class="grid">${grid}</g><g class="axis">${axis}</g>${lines}</svg>`;
+  }
+  function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    const m = raw / p;
+    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+  }
+
+  function matrixHTML(rows, races) {
+    const { settings } = data();
+    const head = races.map((r, i) => `<th title="${esc(r.name)} · ${esc(fmtDate(r.date))}">R${i + 1}${r.sprint ? '<span class="sprint-tag">S</span>' : ""}<br><span style="font-weight:600">${esc(abbr(r.name))}</span></th>`).join("");
+    const body = rows.map((row) => {
+      const id = row.driver.id;
+      const cells = races.map((r) => {
+        const pos = posOf(r, id), idx = pos ? pos - 1 : -1;
+        const fl = !r.sprint && settings.fastestLap && r.fastestLap === id && idx >= 0 && idx < 10;
+        if (idx >= 0) {
+          const pts = pointsFor(r, id, settings);
+          const cls = idx === 0 ? "p1" : idx === 1 ? "p2" : idx === 2 ? "p3" : pts > 0 ? "pts" : "nopts";
+          return `<td class="cell ${cls}${fl ? " fl" : ""}" title="P${idx + 1}, ${pts} pts">${idx + 1}</td>`;
+        }
+        if ((r.dnf || []).includes(id)) return `<td class="cell dnf" title="Did not finish">DNF</td>`;
+        return `<td class="cell" title="Did not race">–</td>`;
+      }).join("");
+      return `<tr><td class="drv"><i style="background:${esc(row.driver.color)}"></i>${esc(row.driver.code)}</td>${cells}<td class="total">${row.total}</td></tr>`;
+    }).join("");
+    return `<table class="matrix"><thead><tr><th class="drv">Driver</th>${head}<th style="text-align:right">Pts</th></tr></thead><tbody>${body}</tbody></table>`;
+  }
+  function abbr(name) {
+    const w = (name || "").replace(/\b(grand prix|gp|sprint|race)\b/gi, "").trim();
+    return (w.replace(/[^A-Za-z]/g, "").slice(0, 3) || "RAC").toUpperCase();
+  }
+
+  function renderRaceList() {
+    const el = $("race-list");
+    const d = data();
+    const races = sortedRaces(d.races);
+    if (!races.length) {
+      el.innerHTML = `<p class="muted" style="margin:0">${d.drivers.length ? "No races logged yet." : "Add drivers on the Drivers tab before logging a race."}</p>`;
+      return;
+    }
+    const byId = Object.fromEntries(d.drivers.map((x) => [x.id, x]));
+    el.innerHTML = `<ol class="races">${races.map((r, i) => {
+      const finishers = d.drivers.map((x) => ({ x, pos: posOf(r, x.id) })).filter((e) => e.pos).sort((a, b) => a.pos - b.pos);
+      const dnfs = (r.dnf || []).filter((id) => byId[id]);
+      const pod = finishers.map((e) => `<span><strong>${esc(e.x.code)}</strong> P${e.pos}</span>`).join("") + dnfs.map((id) => `<span><strong>${esc(byId[id].code)}</strong> DNF</span>`).join("");
+      return `<li>
+        <span class="rnd">R${i + 1}</span>
+        <div style="min-width:0"><div class="rname">${esc(r.name)}${r.sprint ? ' <span class="sprint-tag">SPRINT</span>' : ""}</div>
+          <div class="rsub">${esc(fmtDate(r.date))} · ${finishers.length + dnfs.length} of ${d.drivers.length} raced</div>
+          <div class="podium">${pod}</div></div>
+        ${editable() ? `<button class="btn small" data-act="edit-race" data-id="${esc(r.id)}">Edit</button>` : "<span></span>"}
+      </li>`;
+    }).join("")}</ol>`;
+  }
+
+  function renderDriverList() {
+    const el = $("driver-list");
+    const d = data();
+    if (!d.drivers.length) { el.innerHTML = `<p class="muted" style="margin:0">No drivers yet.</p>`; return; }
+    const list = [...d.drivers].sort((a, b) => a.name.localeCompare(b.name));
+    el.innerHTML = `<ul class="drivers">${list.map((x) => `
+      <li style="--c:${esc(x.color)}">
+        <span class="num">${x.number ?? ""}</span>
+        <div style="min-width:0"><div class="dn">${esc(x.name)}</div><div class="dc">${esc(x.code)}</div></div>
+        ${editable() ? `<button class="btn small" data-act="edit-driver" data-id="${esc(x.id)}">Edit</button>` : "<span></span>"}
+      </li>`).join("")}</ul>`;
+    $("driver-form-panel").hidden = !editable();
+  }
+
+  // ---------- Race form ----------
+  function openRace(race) {
+    ui.race = race
+      ? { id: race.id, name: race.name, date: race.date, sprint: !!race.sprint, entries: entriesOf(race), fastestLap: race.fastestLap || null, createdAt: race.createdAt || Date.now() }
+      : { id: null, name: "", date: todayISO(), sprint: false, entries: {}, fastestLap: null, createdAt: Date.now() };
+    $("race-name").value = ui.race.name;
+    $("race-date").value = ui.race.date;
+    ui.confirm = null;
+    setTab("races");
+    renderRaceForm();
+    $("race-form-panel").scrollIntoView({ block: "start", behavior: "smooth" });
+    $("race-name").focus({ preventScroll: true });
+  }
+  function entriesOf(race) {
+    const e = {};
+    for (const x of live.drivers) { const p = posOf(race, x.id); if (p) e[x.id] = String(p); }
+    for (const id of race.dnf || []) if (!e[id]) e[id] = "DNF";
+    return e;
+  }
+  // Positions two friends both claimed (only one car can finish in each).
+  function clashes(entries) {
+    const seen = {}, out = new Set();
+    for (const [id, v] of Object.entries(entries)) { if (!v || v === "DNF") continue; if (seen[v]) { out.add(id); out.add(seen[v]); } else seen[v] = id; }
+    return out;
+  }
+  function closeRace() { ui.race = null; ui.confirm = null; renderRaceForm(); }
+
+  function renderRaceForm() {
+    const panel = $("race-form-panel");
+    const f = ui.race;
+    panel.hidden = !f || !editable();
+    if (!f || panel.hidden) return;
+    const d = data();
+    const byId = Object.fromEntries(d.drivers.map((x) => [x.id, x]));
+    for (const id of Object.keys(f.entries)) if (!byId[id]) delete f.entries[id];
+    const flPos = Number(f.entries[f.fastestLap]);
+    if (f.fastestLap && !(flPos >= 1 && flPos <= 10)) f.fastestLap = null;
+
+    $("race-form-title").textContent = f.id ? "Edit race" : "Log a race";
+    $("type-gp").setAttribute("aria-pressed", String(!f.sprint));
+    $("type-sprint").setAttribute("aria-pressed", String(f.sprint));
+    $("race-delete").hidden = !f.id;
+    $("race-delete").textContent = ui.confirm === "race" ? "Tap again to delete" : "Delete race";
+    const scale = f.sprint ? SPRINT_POINTS : GP_POINTS;
+    const showFL = !f.sprint && d.settings.fastestLap;
+    $("points-hint").textContent = f.sprint
+      ? "Sprint points: 8-7-6-5-4-3-2-1 for P1 to P8. P9 and below score nothing."
+      : `Grand Prix points: 25-18-15-12-10-8-6-4-2-1 for P1 to P10. P11 and below score nothing.${showFL ? " Tap ◆ for whoever set the fastest lap (top-10 finishers only)." : ""}`;
+
+    const clash = clashes(f.entries);
+    const opts = (v) => `<option value=""${!v ? " selected" : ""}>Didn't race</option>` +
+      Array.from({ length: GRID_SIZE }, (_, i) => `<option value="${i + 1}"${v === String(i + 1) ? " selected" : ""}>P${i + 1}</option>`).join("") +
+      `<option value="DNF"${v === "DNF" ? " selected" : ""}>DNF</option>`;
+    const list = [...d.drivers].sort((a, b) => a.name.localeCompare(b.name));
+    $("entries").innerHTML = list.map((x) => {
+      const v = f.entries[x.id] || "";
+      const pos = Number(v) || 0;
+      const fl = f.fastestLap === x.id;
+      const pts = pos ? (scale[pos - 1] || 0) + (fl && showFL && pos <= 10 ? 1 : 0) : 0;
+      return `<li class="${clash.has(x.id) ? "clash" : ""}">
+        <span class="stripe" style="background:${esc(x.color)}"></span>
+        <span class="nm"><b>${esc(x.code)}</b><span>${esc(x.name)}</span></span>
+        <span class="sel"><select id="pos-${esc(x.id)}" data-id="${esc(x.id)}" aria-label="Finishing position for ${esc(x.name)}">${opts(v)}</select></span>
+        <span class="flcell">${showFL ? `<button type="button" class="icon-btn${fl ? " fl-on" : ""}" data-act="fl" data-id="${esc(x.id)}" aria-pressed="${fl}" ${pos >= 1 && pos <= 10 ? "" : "disabled"} title="Fastest lap" aria-label="Fastest lap for ${esc(x.name)}">◆</button>` : ""}</span>
+        <span class="epts">${v ? pts : "–"}<small>${v ? "PTS" : ""}</small></span>
+        ${clash.has(x.id) ? `<span class="clash-msg">P${esc(v)} is taken by another friend.</span>` : ""}
+      </li>`;
+    }).join("");
+    renderDryRun();
+  }
+
+  // Standings as they are now vs. as they'd be with this draft saved. Nothing is written.
+  function renderDryRun() {
+    const f = ui.race;
+    const el = $("race-preview");
+    const hasEntries = Object.values(f.entries).some(Boolean);
+    const head = `<div class="dry-head"><h3 style="margin:0">Dry run</h3><p>How the standings would look if you saved this race. Nothing is saved until you press Save race.</p></div>`;
+    if (!hasEntries) { el.innerHTML = head + `<p class="muted" style="margin:0;font-size:14px">Pick a position above to see the effect on the championship.</p>`; return; }
+    const draft = { id: f.id || "__draft__", name: f.name, date: f.date || todayISO(), sprint: f.sprint, ...splitEntries(f.entries), fastestLap: f.sprint ? null : f.fastestLap, createdAt: f.createdAt };
+    const saved = data().races;
+    const before = standings(saved).rows;
+    const after = standings([...saved.filter((r) => r.id !== f.id), draft]).rows;
+    const beforeIdx = Object.fromEntries(before.map((r, i) => [r.driver.id, i]));
+    const beforePts = Object.fromEntries(before.map((r) => [r.driver.id, r.total]));
+    const rows = after.map((r, i) => {
+      const was = beforeIdx[r.driver.id], moved = was - i, gain = r.total - beforePts[r.driver.id];
+      const move = moved > 0 ? `<span class="up" title="Up ${moved}">▲${moved}</span>` : moved < 0 ? `<span class="down" title="Down ${-moved}">▼${-moved}</span>` : "";
+      return `<tr><td class="p">P${i + 1}${move}</td><td class="d"><i style="background:${esc(r.driver.color)}"></i><strong>${esc(r.driver.code)}</strong> <span class="muted">${esc(r.driver.name)}</span></td>
+        <td>${beforePts[r.driver.id]}</td><td class="gain">${gain > 0 ? "+" + gain : gain < 0 ? "−" + -gain : "±0"}</td><td class="after">${r.total}</td></tr>`;
+    }).join("");
+    el.innerHTML = head + `<div class="scroll"><table><thead><tr><th>Pos</th><th>Driver</th><th>Now</th><th>This race</th><th>After</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  async function saveRace(e) {
+    e.preventDefault();
+    const f = ui.race;
+    if (!f) return;
+    f.name = $("race-name").value.trim();
+    f.date = $("race-date").value;
+    if (!f.name || !f.date) { toast("Give the race a name and a date."); return; }
+    if (!Object.values(f.entries).some(Boolean)) { toast("Pick a finishing position for at least one friend."); return; }
+    if (clashes(f.entries).size) { toast("Two friends can't finish in the same position."); return; }
+    const { positions, dnf } = splitEntries(f.entries);
+    const doc = { name: f.name, date: f.date, sprint: f.sprint, positions, dnf, fastestLap: f.sprint ? null : f.fastestLap, createdAt: f.createdAt, updatedAt: Date.now() };
+    const ref = f.id ? ui.db.doc("races/" + f.id) : ui.db.collection("races").doc();
+    $("race-save").disabled = true;
+    try {
+      await write(() => ref.set(doc));
+      toast(f.id ? "Race updated" : `${f.name} saved`);
+      closeRace();
+      setTab("standings");
+    } catch {} finally { $("race-save").disabled = false; }
+  }
+
+  // ---------- Driver form ----------
+  function renderDriverForm() {
+    $("swatches").innerHTML = COLORS.map(([name, hex]) => `<button type="button" class="swatch" style="background:${hex}" data-act="color" data-hex="${hex}" aria-pressed="${ui.driverColor === hex}" aria-label="${name}" title="${name}"></button>`).join("");
+    const editing = !!ui.driverEdit;
+    $("driver-form-title").textContent = editing ? "Edit driver" : "Add a driver";
+    $("drv-save").textContent = editing ? "Save driver" : "Add driver";
+    $("drv-cancel").hidden = !editing;
+    $("drv-delete").hidden = !editing;
+    $("drv-delete").textContent = ui.confirm === "driver" ? "Tap again to remove" : "Remove driver";
+  }
+  function editDriver(id) {
+    const x = live.drivers.find((d) => d.id === id);
+    if (!x) return;
+    ui.driverEdit = id; ui.driverColor = x.color; ui.confirm = null;
+    $("drv-name").value = x.name; $("drv-code").value = x.code; $("drv-num").value = x.number ?? "";
+    renderDriverForm();
+    $("driver-form-panel").scrollIntoView({ block: "start", behavior: "smooth" });
+    $("drv-name").focus({ preventScroll: true });
+  }
+  function resetDriverForm() {
+    ui.driverEdit = null; ui.confirm = null;
+    $("driver-form").reset();
+    const used = new Set(live.drivers.map((d) => d.color));
+    ui.driverColor = (COLORS.find(([, h]) => !used.has(h)) || COLORS[0])[1];
+    renderDriverForm();
+  }
+  async function saveDriver(e) {
+    e.preventDefault();
+    const name = $("drv-name").value.trim();
+    if (!name) { toast("Enter the driver's name."); return; }
+    const code = ($("drv-code").value.trim() || codeFor(name)).toUpperCase().slice(0, 3);
+    const numRaw = $("drv-num").value;
+    const number = numRaw === "" ? null : Math.max(0, Math.min(99, parseInt(numRaw, 10) || 0));
+    const id = ui.driverEdit;
+    const existing = id ? live.drivers.find((d) => d.id === id) : null;
+    const doc = { name, code, number, color: ui.driverColor, createdAt: existing?.createdAt || Date.now() };
+    const ref = id ? ui.db.doc("drivers/" + id) : ui.db.collection("drivers").doc();
+    $("drv-save").disabled = true;
+    try {
+      await write(() => ref.set(doc));
+      toast(id ? `${name} updated` : `${name} joins the grid`);
+      resetDriverForm();
+    } catch {} finally { $("drv-save").disabled = false; }
+  }
+
+  // ---------- Writes ----------
+  async function write(fn) {
+    try { return await fn(); }
+    catch (err) {
+      if (err?.code === "unavailable") {
+        await new Promise((r) => setTimeout(r, 400 + Math.random() * 600));
+        try { return await fn(); } catch (e2) { err = e2; }
+      }
+      if (err?.code === "invalid_argument" && ui.canWrite) {
+        ui.canWrite = false; render();
+        toast("This page is view only for you, so the change wasn't saved.");
+      } else if (err?.code === "quota_exceeded") {
+        toast("The shared store is full. Delete an old race to make room.");
+      } else {
+        toast("Couldn't save just now. Check your connection and try again.");
+      }
+      throw err;
+    }
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 3200);
+  }
+
+  // ---------- Tabs ----------
+  function setTab(tab) {
+    ui.tab = tab;
+    for (const [t, panel] of [["standings", "standings"], ["races", "races"], ["grid", "grid"]]) {
+      $("tab-" + t).setAttribute("aria-selected", String(t === tab));
+      $(panel).hidden = t !== tab;
+    }
+    try { history.replaceState(null, "", "#" + tab); } catch {}
+  }
+  document.querySelector(".tabs").addEventListener("click", (e) => {
+    const b = e.target.closest(".tab"); if (b) setTab(b.id.replace("tab-", ""));
+  });
+
+  // ---------- Events ----------
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-act]");
+    if (!b) return;
+    const act = b.dataset.act, id = b.dataset.id;
+    const f = ui.race;
+    switch (act) {
+      case "example": ui.example = true; render(); setTab("standings"); break;
+      case "exit-example": ui.example = false; render(); break;
+      case "goto-grid": setTab("grid"); $("drv-name").focus(); break;
+      case "new-race": openRace(null); break;
+      case "edit-race": openRace(live.races.find((r) => r.id === id)); break;
+      case "edit-driver": editDriver(id); break;
+      case "color": ui.driverColor = b.dataset.hex; renderDriverForm(); break;
+      case "fl": f.fastestLap = f.fastestLap === id ? null : id; renderRaceForm(); break;
+    }
+  });
+  $("entries").addEventListener("change", (e) => {
+    const sel = e.target.closest("select[data-id]");
+    if (!sel || !ui.race) return;
+    ui.race.entries[sel.dataset.id] = sel.value;
+    renderRaceForm();
+    $("pos-" + sel.dataset.id)?.focus();
+  });
+  $("type-gp").addEventListener("click", () => { ui.race.sprint = false; renderRaceForm(); });
+  $("type-sprint").addEventListener("click", () => { ui.race.sprint = true; renderRaceForm(); });
+  $("race-name").addEventListener("input", (e) => { if (ui.race) ui.race.name = e.target.value; });
+  $("race-date").addEventListener("input", (e) => { if (ui.race) ui.race.date = e.target.value; });
+  $("race-form").addEventListener("submit", saveRace);
+  $("race-cancel").addEventListener("click", closeRace);
+  $("race-clear").addEventListener("click", () => {
+    const f = ui.race;
+    if (!f) return;
+    f.name = ""; f.sprint = false; f.entries = {}; f.fastestLap = null;
+    $("race-name").value = "";
+    renderRaceForm();
+    toast("Race fields cleared");
+    $("race-name").focus();
+  });
+  $("race-new").addEventListener("click", () => openRace(null));
+  $("race-delete").addEventListener("click", async () => {
+    if (ui.confirm !== "race") { ui.confirm = "race"; renderRaceForm(); setTimeout(() => { if (ui.confirm === "race") { ui.confirm = null; renderRaceForm(); } }, 4000); return; }
+    const f = ui.race;
+    try { await write(() => ui.db.doc("races/" + f.id).delete()); toast(`${f.name} deleted`); closeRace(); } catch {}
+  });
+  $("driver-form").addEventListener("submit", saveDriver);
+  $("drv-cancel").addEventListener("click", resetDriverForm);
+  $("drv-name").addEventListener("input", (e) => { if (!ui.driverEdit) $("drv-code").placeholder = codeFor(e.target.value) || "ABC"; });
+  $("drv-delete").addEventListener("click", async () => {
+    if (ui.confirm !== "driver") { ui.confirm = "driver"; renderDriverForm(); setTimeout(() => { if (ui.confirm === "driver") { ui.confirm = null; renderDriverForm(); } }, 4000); return; }
+    const x = live.drivers.find((d) => d.id === ui.driverEdit);
+    try { await write(() => ui.db.doc("drivers/" + ui.driverEdit).delete()); toast(`${x?.name || "Driver"} removed from the grid`); resetDriverForm(); } catch {}
+  });
+  $("set-fl").addEventListener("change", async (e) => {
+    const next = { ...live.settings, fastestLap: e.target.checked };
+    try { await write(() => ui.db.doc("season/settings").set(next)); } catch { e.target.checked = !e.target.checked; }
+  });
+  $("season-name").addEventListener("click", () => {
+    if (!editable()) return;
+    const h = $("season-name");
+    const input = document.createElement("input");
+    input.id = "season-name-input"; input.value = live.settings.name || DEFAULT_SETTINGS.name; input.maxLength = 40;
+    input.setAttribute("aria-label", "Season name");
+    input.style.cssText = "font:inherit;text-transform:inherit;background:transparent;color:inherit;border:0;border-bottom:2px solid var(--red);width:min(100%,18ch);padding:0";
+    h.replaceWith(input); input.focus(); input.select();
+    let done = false;
+    const finish = async (save) => {
+      if (done) return; done = true;
+      const name = input.value.trim();
+      input.replaceWith(h);
+      if (save && name && name !== live.settings.name) {
+        h.textContent = name;
+        try { await write(() => ui.db.doc("season/settings").set({ ...live.settings, name })); } catch { renderHeader(); }
+      }
+    };
+    input.addEventListener("keydown", (ev) => { if (ev.key === "Enter") finish(true); if (ev.key === "Escape") finish(false); });
+    input.addEventListener("blur", () => finish(true));
+  });
+
+  // ---------- Boot ----------
+  const initialTab = ["standings", "races", "grid"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "standings";
+  setTab(initialTab);
+  resetDriverForm();
+  render();
+
+  (async () => {
+    const db = window.claude?.use ? await window.claude.use("db") : null;
+    if (!db) { ui.dbState = "unavailable"; render(); return; }
+    ui.db = db; ui.dbState = "ready";
+    const onErr = () => { ui.dbState = "unavailable"; render(); };
+    db.collection("drivers").onSnapshot((snap) => {
+      live.drivers = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((d) => d.name);
+      live.loaded.drivers = true;
+      if (!ui.driverEdit) { const used = new Set(live.drivers.map((d) => d.color)); if (used.has(ui.driverColor)) ui.driverColor = (COLORS.find(([, h]) => !used.has(h)) || COLORS[0])[1]; }
+      render();
+    }, onErr);
+    db.collection("races").onSnapshot((snap) => {
+      live.races = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      live.loaded.races = true;
+      render();
+    }, onErr);
+    db.doc("season/settings").onSnapshot((snap) => {
+      live.settings = { ...DEFAULT_SETTINGS, ...(snap.exists ? snap.data() : {}) };
+      render();
+    }, onErr);
+    render();
+    try {
+      const user = await window.claude.use("user");
+      const w = user ? await user.can("data.write") : null;
+      if (w === false) { ui.canWrite = false; render(); }
+    } catch {}
+  })();
+})();
+</script>

@@ -127,3 +127,19 @@ jobs:
 
           echo "Server did not become healthy in time" >&2
           exit 1
+
+  rgb-controller:
+    name: RGB controller (Arduino compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Install AVR core and libraries
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:avr
+          arduino-cli lib install "Adafruit SSD1306@2.5.13" "Adafruit GFX Library@1.12.1" "FastLED@3.9.4" "Keypad@3.1.1"
+
+      - run: arduino-cli compile --fqbn arduino:avr:uno --warnings all rgb-controller

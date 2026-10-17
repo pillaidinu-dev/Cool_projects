@@ -6,6 +6,8 @@ with its own client/server, README, and Dockerfile.
 - **[PlanSync](#plansync)** (`client/`, `server/`) — an activity-based matching dating app.
 - **[NFL Week Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for a full
   NFL week's scores, stat leaders, and touchdown scorers.
+- **[RGB Light Controller](rgb-controller/README.md)** (`rgb-controller/`) — an Arduino sketch for a
+  PIN-locked RGB LED controller with an OLED menu, joystick, keypad and slide pot.
 
 ---
 

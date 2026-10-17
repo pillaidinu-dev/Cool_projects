@@ -57,10 +57,14 @@ put(ws, "A2", "Blue text = numbers you can change. Yellow = guesses to replace w
 header(ws, 4, ["Item", "Size", "Price ($)", "Ingredient cost per unit ($)", "Stock prepared (units)", "Low (units / day)", "Expected (units / day)", "High (units / day)", "Notes"])
 items = [
     ("Medhu Vadai", "1 plate", 6, 50, 10, 20, 35),
-    ("Paneer Puff", "1 piece", 4, 40, 10, 20, 35),
-    ("Podi Idly", "1 plate", 8, 30, 8, 15, 25),
-    ("Rose Milk", "10 oz", 4, 20, 12, 25, 40),
+    ("Paneer Puff", "1 piece", 4, 30, 10, 20, 35),
+    ("Podi Idly", "1 plate", 8, 20, 8, 15, 25),
+    ("Rose Milk", "10 oz", 3, 15, 12, 25, 40),
+    ("Misc", "", 3, None, 0, 0, 0),
 ]
+# Units actually sold, from the ledger (31 orders, exported Oct 12), and the real total spend.
+ACTUAL_UNITS = [16, 21, 8, 8, 1]
+ACTUAL_SPEND = 144
 for r, it in zip(ROWS, items):
     name, size, price, stock, lo, ex, hi = it
     put(ws, f"A{r}", name, BLUE); put(ws, f"B{r}", size, BLUE)
@@ -68,15 +72,15 @@ for r, it in zip(ROWS, items):
     put(ws, f"D{r}", 0, BLUE, MONEY, YELLOW)
     put(ws, f"E{r}", stock, BLUE, INT)
     put(ws, f"F{r}", lo, BLUE, INT, YELLOW); put(ws, f"G{r}", ex, BLUE, INT, YELLOW); put(ws, f"H{r}", hi, BLUE, INT, YELLOW)
-for r in (9, 10):
+for r in (10,):
     for col, fmt in zip("CDEFGH", [MONEY, MONEY, INT, INT, INT, INT]):
         ws[f"{col}{r}"].number_format = fmt; ws[f"{col}{r}"].font = BLUE
     ws[f"A{r}"].font = BLUE; ws[f"B{r}"].font = BLUE
-put(ws, "I5", "Prices: from you (Idly $8 and Rose Milk $4, as updated in the tracker).", NOTE)
+put(ws, "I5", "Prices: from the tracker (Rose Milk $3, Misc $3 as sold).", NOTE)
 put(ws, "I6", "Units per day: my starting guesses for a small weekend stall. Replace with your own.", NOTE)
-put(ws, "I7", "Stock: from you (50 / 40 / 30 / 20 for the weekend).", NOTE)
+put(ws, "I7", "Stock: from the tracker (50 / 30 / 20 / 15; Misc not counted).", NOTE)
 put(ws, "I8", "Ingredient cost: 0 because your $50 cooking items are in fixed costs. Enter a per-unit cost to model buying more for bigger days.", NOTE)
-put(ws, "I9", "Rows 9-10: spare rows for new items.", NOTE)
+put(ws, "I9", "Misc: added in the tracker during the event. Row 10 is a spare row.", NOTE)
 ws["D5"].comment = Comment("Leave at 0 if the $50 cooking items covers all your ingredients. If you'd buy more ingredients to sell more, enter the cost per plate/piece/cup here.", "Claude")
 
 put(ws, "A12", "Fixed costs", BOLD)
@@ -173,7 +177,7 @@ for r in ROWS:
     put(st, f"D{r}", f"=Projection!G{r}", GREEN, INT)
     put(st, f"E{r}", f'=IF(OR(A{r}="",Inputs!E{r}=""),0,B{r}-C{r})', BLACK, INT)
     put(st, f"F{r}", f"=B{r}*Inputs!C{r}", BLACK, MONEY0)
-    put(st, f"G{r}", f'=IF(A{r}="","",IF(Inputs!E{r}="","Enter stock on Inputs",IF(B{r}>=D{r},"Enough even for a busy weekend",IF(B{r}>=C{r},"Enough for expected","Short by "&(C{r}-B{r})&" for expected"))))', BLACK)
+    put(st, f"G{r}", f'=IF(A{r}="","",IF(Inputs!E{r}="","Stock not counted",IF(B{r}>=D{r},"Enough even for a busy weekend",IF(B{r}>=C{r},"Enough for expected","Short by "&(C{r}-B{r})&" for expected"))))', BLACK)
 put(st, "A11", "Total", BOLD)
 for col, fmt in zip("BCDEF", [INT, INT, INT, INT, MONEY0]):
     put(st, f"{col}11", f"=SUM({col}5:{col}10)", BLACK, fmt, TOT_FILL, bold=True)
@@ -186,13 +190,13 @@ widths(st, {"A": 18, "B": 12, "C": 12, "D": 11, "E": 14, "F": 16, "G": 32})
 # ---------------- Actuals ----------------
 ac = wb.create_sheet("Actuals")
 put(ac, "A1", "Actuals vs Projection", TITLE)
-put(ac, "A2", "After the weekend, enter units sold from the tracker's Summary export (the Sold column). Actual sales = price x units sold. Yellow cells are yours to fill.", NOTE)
+put(ac, "A2", "Units sold are from the tracker (31 orders, exported Oct 12). Actual sales = price x units sold. Yellow cells can be changed if more sales come in.", NOTE)
 header(ac, 4, ["Item", "Price ($)", "Expected units", "Actual units sold", "Difference (units)", "Expected sales ($)", "Actual sales ($)\n= price x units"])
 for r in ROWS:
     put(ac, f"A{r}", f'=IF(Inputs!A{r}="","",Inputs!A{r})', GREEN)
     put(ac, f"B{r}", f"=Inputs!C{r}", GREEN, MONEY)
     put(ac, f"C{r}", f"=Projection!E{r}", GREEN, INT)
-    put(ac, f"D{r}", None, BLUE, INT, YELLOW if r < 9 else None)
+    put(ac, f"D{r}", ACTUAL_UNITS[r - 5] if r - 5 < len(ACTUAL_UNITS) else None, BLUE, INT, YELLOW if r - 5 < len(ACTUAL_UNITS) else None)
     put(ac, f"E{r}", f'=IF(D{r}="",0,D{r}-C{r})', BLACK, INT)
     put(ac, f"F{r}", f"=B{r}*C{r}", BLACK, MONEY0)
     put(ac, f"G{r}", f"=B{r}*D{r}", BLACK, MONEY0)
@@ -205,15 +209,18 @@ ac["A11"].fill = TOT_FILL; ac["B11"].fill = TOT_FILL
 header(ac, 13, ["Profit", "Expected", "Actual"])
 put(ac, "A14", "Sales"); put(ac, "B14", "=F11", BLACK, MONEY0); put(ac, "C14", "=G11", BLACK, MONEY0)
 put(ac, "A15", "Ingredient cost (per-unit)"); put(ac, "B15", "=Projection!C15", GREEN, MONEY0); put(ac, "C15", "=SUMPRODUCT(D5:D10,Inputs!$D$5:$D$10)", BLACK, MONEY0)
-put(ac, "A16", "Spend"); put(ac, "B16", "=Inputs!B17", GREEN, MONEY0); put(ac, "C16", "=Inputs!B17", GREEN, MONEY0, YELLOW)
-put(ac, "D16", "Type over this with your real total spend from the tracker if it changed.", NOTE)
+put(ac, "A16", "Spend"); put(ac, "B16", "=Inputs!B17", GREEN, MONEY0); put(ac, "C16", ACTUAL_SPEND, BLUE, MONEY0, YELLOW)
+put(ac, "D16", "Real spend from the tracker: stall fee $60, supplies $38, cooking items $45, Drift $1.", NOTE)
 put(ac, "A17", "Profit / loss", BOLD)
 put(ac, "B17", "=B14-B15-B16", BLACK, MONEY0, TOT_FILL, bold=True); put(ac, "C17", "=C14-C15-C16", BLACK, MONEY0, TOT_FILL, bold=True)
 for c in "ABC": ac[f"{c}17"].border = TOP
 ac["A17"].fill = TOT_FILL
-put(ac, "A18", "Actual vs expected"); put(ac, "C18", "=C17-B17", BLACK, MONEY0)
-put(ac, "A20", "Leave Actual units blank until the weekend is done. Until then, Actual shows a loss of your spend.", NOTE)
+put(ac, "A18", "Profit margin"); put(ac, "B18", "=IF(B14=0,0,B17/B14)", BLACK, PCT); put(ac, "C18", "=IF(C14=0,0,C17/C14)", BLACK, PCT)
+put(ac, "D18", "Profit / sales: the share of each dollar of sales you kept.", NOTE)
+put(ac, "A19", "Actual vs expected profit"); put(ac, "C19", "=C17-B17", BLACK, MONEY0)
+put(ac, "A20", "Expected uses the Inputs guesses; Actual uses what the tracker recorded.", NOTE)
 ac.conditional_formatting.add("E5:E11", CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, color="C0392B")))
+ac.conditional_formatting.add("C19", CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, bold=True, color="C0392B")))
 ac.conditional_formatting.add("B17:C18", CellIsRule(operator="lessThan", formula=["0"], font=Font(name=F, bold=True, color="C0392B")))
 ac.conditional_formatting.add("B17:C17", CellIsRule(operator="greaterThan", formula=["0"], font=Font(name=F, bold=True, color="2F7D32")))
 widths(ac, {"A": 26, "B": 12, "C": 12, "D": 13, "E": 13, "F": 14, "G": 15})

@@ -127,3 +127,62 @@ jobs:
 
           echo "Server did not become healthy in time" >&2
           exit 1
+
+  stock-tracker-client:
+    name: Stock Tracker client (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: stock-tracker/client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: stock-tracker/client/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  stock-tracker-server:
+    name: Stock Tracker server (smoke test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: stock-tracker/server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: stock-tracker/server/package-lock.json
+
+      - run: npm ci
+
+      # Demo prices, so CI never depends on Yahoo Finance being reachable.
+      - name: Start server, add a position, and load the profit history
+        env:
+          PRICE_SOURCE: demo
+          DB_PATH: ${{ runner.temp }}/stocks.db
+        run: |
+          node --no-warnings src/index.js &
+          server_pid=$!
+          trap "kill $server_pid" EXIT
+
+          for _ in $(seq 1 10); do
+            if curl -sf http://localhost:4200/api/health; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -sf -X POST -H 'Content-Type: application/json' \
+            -d '{"symbol":"AAPL","shares":10,"buyPrice":150,"buyDate":"2025-01-02"}' \
+            http://localhost:4200/api/positions
+          curl -sf http://localhost:4200/api/positions | grep -q '"symbol":"AAPL"'
+          curl -sf 'http://localhost:4200/api/history?range=1y' | grep -q '"profit"'

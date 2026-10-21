@@ -71,3 +71,10 @@ services:
     buildFilter:
       paths:
         - nba-dashboard/**
+      # The daily data commits are read live from GitHub (NBA_DATA_URL), so
+      # they don't need a rebuild — only code changes do.
+      ignoredPaths:
+        - nba-dashboard/data/**
+    envVars:
+      - key: NBA_DATA_URL
+        value: https://raw.githubusercontent.com/pillaidinu-dev/Cool_projects/main/nba-dashboard/data

@@ -78,6 +78,7 @@ def test_pipeline():
         assert abs(sum(d["units"] for d in history["days"]) - history["overall"]["units"]) < 0.1
         assert history["overall"]["roi"] is not None
         assert json.loads((data / "latest.json").read_text())["date"] == today.isoformat()
+        assert json.loads((data / "index.json").read_text())["dates"] == [p.stem for p in reversed(slates)]
 
         # Re-running after tip-off must not overwrite the frozen slate.
         before = (data / "projections" / f"{today.isoformat()}.json").read_text()

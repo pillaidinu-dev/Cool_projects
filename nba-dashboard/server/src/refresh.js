@@ -1,12 +1,15 @@
 import { execFile } from 'node:child_process';
-import { ML_DIR } from './store.js';
+import { DATA_URL, ML_DIR } from './store.js';
 
 // The scheduled GitHub Action (.github/workflows/nba-daily.yml) is the
 // primary daily refresh, and the only one whose output is kept (it commits
 // data/ back to the repo). This in-server refresh is a fallback for when
 // that hasn't run yet today; its output lives only as long as the
 // container. Off unless NBA_SERVER_REFRESH=1 (the Docker image sets it), so
-// a local `npm run dev` doesn't rewrite the checked-in data/ under you.
+// a local `npm run dev` doesn't rewrite the checked-in data/ under you — and
+// always off when NBA_DATA_URL is set, since the server then reads the
+// Action's committed data directly and a local run would only re-fetch
+// history on every cold start.
 const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 function refresh() {
@@ -22,7 +25,7 @@ function refresh() {
 }
 
 export function startDailyRefresh() {
-  if (process.env.NBA_SERVER_REFRESH !== '1') return;
+  if (process.env.NBA_SERVER_REFRESH !== '1' || DATA_URL) return;
   refresh();
   setInterval(refresh, REFRESH_INTERVAL_MS);
 }

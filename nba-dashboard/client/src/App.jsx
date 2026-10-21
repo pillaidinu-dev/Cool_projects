@@ -4,6 +4,7 @@ import ScoreboardCard from './components/ScoreboardCard.jsx';
 import LeadersTable from './components/LeadersTable.jsx';
 import PropsBoard from './components/PropsBoard.jsx';
 import BestPicks from './components/BestPicks.jsx';
+import GameBoard from './components/GameBoard.jsx';
 import Tracker from './components/Tracker.jsx';
 import { easternYmd, formatDate, shiftYmd } from './stats.js';
 
@@ -41,6 +42,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('scoreboard');
+  const [propView, setPropView] = useState('market');
 
   // Scores/leaders (ESPN, live) and props (the daily pipeline's files) load
   // independently, so ESPN being down never blanks the prop tabs.
@@ -180,7 +182,25 @@ export default function App() {
               <p className="text-slate-500 text-sm">{slate.note || 'No projections yet.'}</p>
             ) : (
               <>
-                <PropsBoard slate={slate} live={slateLive} />
+                <div className="flex gap-1 self-start rounded-lg border border-slate-700 p-0.5" role="group" aria-label="View">
+                  {[
+                    ['market', 'By market'],
+                    ['game', 'By game'],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setPropView(key)}
+                      aria-pressed={propView === key}
+                      className={`px-3 py-1 rounded-md text-xs font-semibold ${
+                        propView === key ? 'bg-slate-100 text-slate-900' : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {propView === 'market' ? <PropsBoard slate={slate} live={slateLive} /> : <GameBoard slate={slate} live={slateLive} />}
                 <BestPicks slate={slate} />
               </>
             )}

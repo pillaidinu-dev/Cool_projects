@@ -5,13 +5,16 @@ import { STAT_BY_KEY, edge, lean, pct, sideProb } from '../stats.js';
 // The slate's biggest disagreements with the L10-average price, across
 // every market — the same daily top-10 the tracker scores.
 export default function BestPicks({ slate, limit = 10 }) {
+  // Players with a history flag (missed games, new team) stay on the board
+  // but not here — their edges come from games that may not describe tonight.
   const picks = slate.players
+    .filter((player) => !player.flags?.length)
     .flatMap((player) => Object.entries(player.props).map(([stat, prop]) => ({ player, stat, prop })))
     .sort((a, b) => edge(b.prop) - edge(a.prop))
     .slice(0, limit);
 
   return (
-    <Card title="Top 10 edges" aside="model probability vs the L10-average price">
+    <Card title="Top 10 edges" aside="model vs L10 price · flagged players excluded">
       {picks.length === 0 ? (
         <p className="px-4 py-6 text-sm text-slate-500">No projections yet.</p>
       ) : (

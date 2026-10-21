@@ -21,6 +21,8 @@ from features import STATS
 
 CONFIDENCE_BUCKETS = [(0.0, 0.40), (0.40, 0.50), (0.50, 0.60), (0.60, 0.70), (0.70, 1.01)]
 PRICE_CLAMP = (0.05, 0.95)
+# The daily top-10 skips flagged players (see projections.history_flags),
+# matching the dashboard's Top 10 edges card.
 TOP_PICKS_PER_DAY = 10
 
 
@@ -134,7 +136,8 @@ def build_history(data_dir, is_sample=False):
                 for lo, hi, t in buckets:
                     if lo <= args[3] < hi:
                         _add(t, *args)
-                picks.append((edge(prop), args))
+                if not player.get("flags"):
+                    picks.append((edge(prop), args))
         for _, args in sorted(picks, key=lambda x: -x[0])[:TOP_PICKS_PER_DAY]:
             _add(day_top, *args)
             _add(top, *args)

@@ -69,11 +69,38 @@ def build_slate(games, client, form, today, log=print):
     return slate
 
 
+# A player who sat out this many of his team's games in a row, right before
+# today, gets flagged: his rolling averages predate whatever kept him out.
+MISSED_GAMES_FLAG = 3
+
+
+def history_flags(logs, form, slate):
+    """player_id -> plain-language reasons his history may not describe
+    tonight: he missed his team's most recent games, or he's on a new team.
+    Flagged players stay on the board but are kept out of the top picks."""
+    team_dates = {team: g["date"].drop_duplicates() for team, g in logs.groupby("team")}
+    flags = {}
+    for p in slate:
+        pid = p["player_id"]
+        last_team, last_date = form.at[pid, "last_team"], form.at[pid, "last_date"]
+        reasons = []
+        if last_team != p["team"]:
+            reasons.append(f"New team (last played for {last_team})")
+        else:
+            missed = int((team_dates.get(last_team, pd.Series(dtype="datetime64[ns]")) > last_date).sum())
+            if missed >= MISSED_GAMES_FLAG:
+                reasons.append(f"Missed his team's last {missed} games")
+        if reasons:
+            flags[pid] = reasons
+    return flags
+
+
 def _r(value, digits=1):
     return round(float(value), digits)
 
 
 def build_projections(logs, form, slate, games, today):
+    flags = history_flags(logs, form, slate)
     players = {
         p["player_id"]: {
             "id": p["player_id"],
@@ -85,6 +112,8 @@ def build_projections(logs, form, slate, games, today):
             "status": p["status"],
             "game": p["game"],
             "min": _r(form.at[p["player_id"], "min_l5"]),
+            "lastPlayed": form.at[p["player_id"], "last_date"].date().isoformat(),
+            "flags": flags.get(p["player_id"], []),
             "props": {},
         }
         for p in slate

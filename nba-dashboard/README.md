@@ -86,6 +86,11 @@ as sample data.
   the side the model rates above that price, and the tracker scores picks in units at those fair
   odds. Positive ROI means the model knows something the L10 average doesn't. Read it as signal
   quality, not real-money returns: real books charge vig and set sharper lines.
+- **History flags**: a player who sat out his team's last 3+ games, or whose last stored game
+  was for a different team, gets an ⓘ badge naming the reason. His props are still projected
+  and graded, but he's kept out of the Top 10 edges and the tracker's daily top-10 record,
+  because his rolling averages predate whatever changed. Flags clear on their own once he
+  plays for his current team.
 - Only rotation players (12+ minutes over the last 5 games) get props. A market is only posted
   once the player's L10 clears a floor (5 pts, 3 reb, 2 ast, 1 three, 0.8 stl/blk, ...).
   Without that floor, near-certain unders like "a point guard's blocks under 0.5" would flood

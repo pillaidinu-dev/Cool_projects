@@ -20,6 +20,9 @@ steals and blocks, each with the player's full stat line. Polls every 30 seconds
 - A **Live** column tracks each prop as the game is played and turns green once the over hits.
 - Players listed as day-to-day or questionable get a ⚠ badge. Players ruled **Out** are left
   off the slate.
+- **By game** switches the board to one game at a time (or all games): a table per team with a
+  row per player and a column per market, each cell showing the projection, lean and line, plus
+  his current stat once the game starts.
 - **Top 10 edges** lists the slate's biggest disagreements with the L10 price, across every
   market.
 

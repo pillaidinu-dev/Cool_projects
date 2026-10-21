@@ -47,14 +47,20 @@ steals and blocks, each with the player's full stat line. Polls every 30 seconds
 
 `.github/workflows/nba-daily.yml` runs it on a schedule: about 10am ET (grade last night,
 project today) and about 6pm ET (re-project before tip-off with the latest injury news). It
-then **commits `nba-dashboard/data/` back to the repo**. The props and results build up in git,
-survive redeploys (Render's free disk doesn't), and every commit redeploys the dashboard with
-fresh data. You can also start a run by hand from the Actions tab (**Run workflow**).
+then **commits `nba-dashboard/data/` to main**, so the props and results build up in git. You
+can also start a run by hand from the Actions tab (**Run workflow**). GitHub only runs
+scheduled and manual workflows from the repo's **default branch**, so that branch must be
+`main` (or must at least carry this workflow file).
 
-The Docker image also runs the pipeline in-process on boot and every 6 hours
-(`NBA_SERVER_REFRESH=1`), as a fallback for when the Action hasn't run yet. Output from that
-fallback lasts only as long as the container. Local `npm run dev` leaves it off, so it doesn't
-rewrite the checked-in data under you. Set `NBA_SERVER_REFRESH=1` to opt in.
+The deployed service reads that data **straight from GitHub**: `NBA_DATA_URL` points at
+`nba-dashboard/data/` on raw.githubusercontent.com, cached for 5 minutes. A daily commit shows
+up on the dashboard within minutes, with no redeploy. Render's build filter ignores
+`nba-dashboard/data/**`, so only code changes use build minutes. If GitHub is unreachable, the
+server falls back to the copy of `data/` bundled into the image.
+
+Without `NBA_DATA_URL`, the Docker image runs the pipeline in-process instead, on boot and
+every 6 hours (`NBA_SERVER_REFRESH=1`). Output from that run lasts only as long as the
+container. Local `npm run dev` leaves both off and reads the checked-in `data/`.
 
 Until the first real run, the server serves `data-sample/`: a few weeks of slates and a tracker
 built by the real pipeline from a synthetic league (`ml/make_sample.py`). It's flagged in the UI

@@ -7,5 +7,6 @@ Written by `ml/daily.py`, committed back to the repo once or twice a day by
 - `projections/<date>.json` — each day's prop projections, frozen at tip-off and graded
   (actuals + hit/miss per prop) the next morning.
 - `history.json` — the season-long tracker rolled up from every graded slate.
+- `index.json` — every saved slate date (the deployed server can't list a directory over HTTP).
 - `latest.json` — today's slate (or the most recent one on an off day).
 - `state.json` — the last date fully fetched, so each run only pulls what's new.

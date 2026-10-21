@@ -60,6 +60,13 @@ def _write_latest(data_dir, today):
     return doc["date"]
 
 
+def _write_index(data_dir):
+    """index.json lists every saved slate, for readers that can't list a
+    directory (the deployed server reads data/ over raw.githubusercontent.com)."""
+    dates = sorted((p.stem for p in projections_dir(data_dir).glob("*.json")), reverse=True)
+    (Path(data_dir) / "index.json").write_text(json.dumps({"dates": dates}) + "\n")
+
+
 def run(data_dir, today, client=espn_client, force=False, is_sample=False, log=_log):
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -92,6 +99,7 @@ def run(data_dir, today, client=espn_client, force=False, is_sample=False, log=_
 
     latest = _write_latest(data_dir, today)
     history = build_history(data_dir, is_sample=is_sample)
+    _write_index(data_dir)
     return {
         "date": today.isoformat(),
         "fetchedDays": len(fetched),

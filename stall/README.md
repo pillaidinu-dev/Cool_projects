@@ -13,6 +13,7 @@ Live tracker: https://claude.ai/artifact/Vkw2pvpHC8Ltw2iUMbQD6M (private; share 
 | `Stall_Sales_Projection.xlsx` | Generated projection workbook (Inputs, Projection, What-if, Stock plan, Actuals). Opens in Excel or Numbers. |
 | `scripts/build_offline.py` | Builds the offline HTML from `src/snack-stall-ledger.html`. |
 | `scripts/build_xlsx.py` | Builds the projection workbook with openpyxl. |
+| `NEXT_STALL.md` | Setup, results and lessons from the first stall, for planning the next one. |
 
 ## Rebuilding
 

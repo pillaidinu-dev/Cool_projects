@@ -10,6 +10,9 @@ with its own client/server, README, and Dockerfile.
   weekly planner: a day/time grid for to-dos, subject colors, and reminders.
 - **[Momentum Dashboard](momentum-dashboard/README.md)** (`momentum-dashboard/`) — every US stock
   up 100%+ year-to-date, screened from live Robinhood market data, with charts.
+- **[NBA Props Live](nba-dashboard/README.md)** (`nba-dashboard/`) — live NBA scores and leaders,
+  daily player-prop projections (points, rebounds, assists, threes, steals, blocks), and a
+  season-long tracker that saves and grades every projection.
 
 ---
 

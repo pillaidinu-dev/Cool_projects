@@ -1,0 +1,383 @@
+{
+  "updatedAt": "2026-10-21T17:33:34.148723+00:00",
+  "isSample": true,
+  "overall": {
+    "n": 2965,
+    "hits": 1746,
+    "hitRate": 0.589,
+    "units": 437.33,
+    "roi": 0.147,
+    "expectedHitRate": 0.597,
+    "mae": 2.38
+  },
+  "byStat": {
+    "pts": {
+      "n": 485,
+      "hits": 283,
+      "hitRate": 0.584,
+      "units": 79.96,
+      "roi": 0.165,
+      "expectedHitRate": 0.574,
+      "mae": 3.49
+    },
+    "reb": {
+      "n": 396,
+      "hits": 214,
+      "hitRate": 0.54,
+      "units": 30.54,
+      "roi": 0.077,
+      "expectedHitRate": 0.569,
+      "mae": 2.42
+    },
+    "ast": {
+      "n": 349,
+      "hits": 218,
+      "hitRate": 0.625,
+      "units": 83.47,
+      "roi": 0.239,
+      "expectedHitRate": 0.593,
+      "mae": 1.8
+    },
+    "fg3m": {
+      "n": 341,
+      "hits": 176,
+      "hitRate": 0.516,
+      "units": 16.96,
+      "roi": 0.05,
+      "expectedHitRate": 0.587,
+      "mae": 1.43
+    },
+    "stl": {
+      "n": 313,
+      "hits": 208,
+      "hitRate": 0.665,
+      "units": 57.34,
+      "roi": 0.183,
+      "expectedHitRate": 0.659,
+      "mae": 0.68
+    },
+    "blk": {
+      "n": 232,
+      "hits": 130,
+      "hitRate": 0.56,
+      "units": 8.76,
+      "roi": 0.038,
+      "expectedHitRate": 0.619,
+      "mae": 1.29
+    },
+    "pra": {
+      "n": 491,
+      "hits": 288,
+      "hitRate": 0.587,
+      "units": 86.61,
+      "roi": 0.176,
+      "expectedHitRate": 0.572,
+      "mae": 4.7
+    },
+    "stocks": {
+      "n": 358,
+      "hits": 229,
+      "hitRate": 0.64,
+      "units": 73.69,
+      "roi": 0.206,
+      "expectedHitRate": 0.636,
+      "mae": 1.33
+    }
+  },
+  "topPicks": {
+    "n": 120,
+    "hits": 86,
+    "hitRate": 0.717,
+    "units": 51.04,
+    "roi": 0.425,
+    "expectedHitRate": 0.764,
+    "mae": 2.34
+  },
+  "calibration": [
+    {
+      "lo": 0.0,
+      "hi": 0.4,
+      "n": 83,
+      "hits": 33,
+      "hitRate": 0.398,
+      "units": 27.57,
+      "roi": 0.332,
+      "expectedHitRate": 0.337,
+      "mae": 1.08
+    },
+    {
+      "lo": 0.4,
+      "hi": 0.5,
+      "n": 317,
+      "hits": 142,
+      "hitRate": 0.448,
+      "units": 7.79,
+      "roi": 0.025,
+      "expectedHitRate": 0.468,
+      "mae": 2.08
+    },
+    {
+      "lo": 0.5,
+      "hi": 0.6,
+      "n": 1260,
+      "hits": 720,
+      "hitRate": 0.571,
+      "units": 190.06,
+      "roi": 0.151,
+      "expectedHitRate": 0.552,
+      "mae": 2.9
+    },
+    {
+      "lo": 0.6,
+      "hi": 0.7,
+      "n": 811,
+      "hits": 484,
+      "hitRate": 0.597,
+      "units": 99.35,
+      "roi": 0.123,
+      "expectedHitRate": 0.644,
+      "mae": 2.32
+    },
+    {
+      "lo": 0.7,
+      "hi": 1.0,
+      "n": 494,
+      "hits": 367,
+      "hitRate": 0.743,
+      "units": 112.56,
+      "roi": 0.228,
+      "expectedHitRate": 0.76,
+      "mae": 1.57
+    }
+  ],
+  "days": [
+    {
+      "date": "2026-10-07",
+      "n": 249,
+      "hits": 159,
+      "hitRate": 0.639,
+      "units": 60.26,
+      "roi": 0.242,
+      "expectedHitRate": 0.593,
+      "mae": 2.46,
+      "top": {
+        "n": 10,
+        "hits": 7,
+        "hitRate": 0.7,
+        "units": 2.82,
+        "roi": 0.282,
+        "expectedHitRate": 0.782,
+        "mae": 1.83
+      }
+    },
+    {
+      "date": "2026-10-08",
+      "n": 250,
+      "hits": 151,
+      "hitRate": 0.604,
+      "units": 42.92,
+      "roi": 0.172,
+      "expectedHitRate": 0.604,
+      "mae": 2.42,
+      "top": {
+        "n": 10,
+        "hits": 7,
+        "hitRate": 0.7,
+        "units": 4.13,
+        "roi": 0.413,
+        "expectedHitRate": 0.784,
+        "mae": 2.02
+      }
+    },
+    {
+      "date": "2026-10-09",
+      "n": 248,
+      "hits": 142,
+      "hitRate": 0.573,
+      "units": 33.83,
+      "roi": 0.136,
+      "expectedHitRate": 0.601,
+      "mae": 2.56,
+      "top": {
+        "n": 10,
+        "hits": 4,
+        "hitRate": 0.4,
+        "units": -0.18,
+        "roi": -0.018,
+        "expectedHitRate": 0.755,
+        "mae": 3.6
+      }
+    },
+    {
+      "date": "2026-10-10",
+      "n": 248,
+      "hits": 163,
+      "hitRate": 0.657,
+      "units": 73.91,
+      "roi": 0.298,
+      "expectedHitRate": 0.594,
+      "mae": 2.37,
+      "top": {
+        "n": 10,
+        "hits": 8,
+        "hitRate": 0.8,
+        "units": 6.95,
+        "roi": 0.695,
+        "expectedHitRate": 0.72,
+        "mae": 1.03
+      }
+    },
+    {
+      "date": "2026-10-11",
+      "n": 256,
+      "hits": 149,
+      "hitRate": 0.582,
+      "units": 34.2,
+      "roi": 0.134,
+      "expectedHitRate": 0.601,
+      "mae": 2.28,
+      "top": {
+        "n": 10,
+        "hits": 10,
+        "hitRate": 1.0,
+        "units": 10.71,
+        "roi": 1.071,
+        "expectedHitRate": 0.767,
+        "mae": 1.2
+      }
+    },
+    {
+      "date": "2026-10-13",
+      "n": 256,
+      "hits": 155,
+      "hitRate": 0.605,
+      "units": 40.1,
+      "roi": 0.157,
+      "expectedHitRate": 0.61,
+      "mae": 2.38,
+      "top": {
+        "n": 10,
+        "hits": 7,
+        "hitRate": 0.7,
+        "units": 3.36,
+        "roi": 0.336,
+        "expectedHitRate": 0.794,
+        "mae": 3.28
+      }
+    },
+    {
+      "date": "2026-10-14",
+      "n": 253,
+      "hits": 138,
+      "hitRate": 0.545,
+      "units": 8.42,
+      "roi": 0.033,
+      "expectedHitRate": 0.605,
+      "mae": 2.34,
+      "top": {
+        "n": 10,
+        "hits": 5,
+        "hitRate": 0.5,
+        "units": -0.12,
+        "roi": -0.012,
+        "expectedHitRate": 0.763,
+        "mae": 5.56
+      }
+    },
+    {
+      "date": "2026-10-15",
+      "n": 250,
+      "hits": 137,
+      "hitRate": 0.548,
+      "units": 16.47,
+      "roi": 0.066,
+      "expectedHitRate": 0.592,
+      "mae": 2.32,
+      "top": {
+        "n": 10,
+        "hits": 5,
+        "hitRate": 0.5,
+        "units": -0.44,
+        "roi": -0.044,
+        "expectedHitRate": 0.788,
+        "mae": 5.09
+      }
+    },
+    {
+      "date": "2026-10-16",
+      "n": 244,
+      "hits": 125,
+      "hitRate": 0.512,
+      "units": 0.13,
+      "roi": 0.001,
+      "expectedHitRate": 0.586,
+      "mae": 2.18,
+      "top": {
+        "n": 10,
+        "hits": 9,
+        "hitRate": 0.9,
+        "units": 7.47,
+        "roi": 0.747,
+        "expectedHitRate": 0.758,
+        "mae": 0.77
+      }
+    },
+    {
+      "date": "2026-10-17",
+      "n": 237,
+      "hits": 124,
+      "hitRate": 0.523,
+      "units": 6.11,
+      "roi": 0.026,
+      "expectedHitRate": 0.585,
+      "mae": 2.29,
+      "top": {
+        "n": 10,
+        "hits": 5,
+        "hitRate": 0.5,
+        "units": 0.86,
+        "roi": 0.086,
+        "expectedHitRate": 0.709,
+        "mae": 1.57
+      }
+    },
+    {
+      "date": "2026-10-18",
+      "n": 236,
+      "hits": 159,
+      "hitRate": 0.674,
+      "units": 73.65,
+      "roi": 0.312,
+      "expectedHitRate": 0.594,
+      "mae": 2.54,
+      "top": {
+        "n": 10,
+        "hits": 9,
+        "hitRate": 0.9,
+        "units": 6.78,
+        "roi": 0.678,
+        "expectedHitRate": 0.759,
+        "mae": 1.24
+      }
+    },
+    {
+      "date": "2026-10-20",
+      "n": 238,
+      "hits": 144,
+      "hitRate": 0.605,
+      "units": 47.32,
+      "roi": 0.199,
+      "expectedHitRate": 0.593,
+      "mae": 2.43,
+      "top": {
+        "n": 10,
+        "hits": 10,
+        "hitRate": 1.0,
+        "units": 8.71,
+        "roi": 0.871,
+        "expectedHitRate": 0.784,
+        "mae": 0.83
+      }
+    }
+  ]
+}

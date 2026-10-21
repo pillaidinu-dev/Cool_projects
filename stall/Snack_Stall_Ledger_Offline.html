@@ -42,6 +42,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 /* P/L strip */
 .pl{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .pl .v{font-family:var(--display);font-weight:800;font-size:1.45rem;line-height:1.1}
+.pl .mg{font-size:.8rem;color:var(--muted);font-weight:600;margin-top:2px}
 .pl .v.good{color:var(--good)} .pl .v.bad{color:var(--bad)}
 .be{grid-column:1/-1;display:flex;flex-direction:column;gap:5px}
 .bar{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}
@@ -185,7 +186,7 @@ select{font:inherit;color:var(--fg);background:var(--surface);border:1px solid v
   <div class="pl" aria-live="polite">
     <div><div class="label">Income</div><div class="v" id="plRev">$0</div></div>
     <div><div class="label">Spend</div><div class="v" id="plSpend">$0</div></div>
-    <div><div class="label">Profit / loss</div><div class="v" id="plNet">$0</div></div>
+    <div><div class="label">Profit / loss</div><div class="v" id="plNet">$0</div><div class="mg" id="plMargin">– margin</div></div>
     <div class="be"><div class="bar" id="beBar"><i></i></div><small id="beText">Add your spend to see break-even.</small></div>
   </div>
 
@@ -590,6 +591,10 @@ select{font:inherit;color:var(--fg);background:var(--surface);border:1px solid v
     $("plRev").title = money(salesRev) + " sales + " + money(extraRev) + " tips and other";
     $("plSpend").textContent = money(sp);
     const n = $("plNet"); n.textContent = (net > 0 ? "+" : "") + money(net); n.className = "v " + (net > 0 ? "good" : net < 0 ? "bad" : "");
+    // profit margin: profit as a share of income (sales plus tips)
+    const mg = $("plMargin");
+    mg.textContent = rev > 0 ? (net / rev * 100).toFixed(1) + "% margin" : "– margin";
+    mg.title = rev > 0 ? "Profit " + money(net) + " ÷ income " + money(rev) : "Margin shows once you have sales";
     const bar = $("beBar");
     if (sp > 0){
       bar.querySelector("i").style.width = Math.min(100, rev/sp*100) + "%";

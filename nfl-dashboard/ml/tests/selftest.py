@@ -15,7 +15,7 @@ import pandas as pd
 
 from features import FEATURE_COLS, build_training_frame, build_upcoming_frame
 from model import project_touchdowns, project_yardage
-from train import touchdown_rows, yardage_rows
+from train import top_per_team, touchdown_rows, yardage_rows
 
 
 def synthetic_gamelogs(weeks=5, seed=7):
@@ -98,7 +98,7 @@ def main():
         checks += 1
         print(f"[ok] {category}: {len(train_df)} training rows, {len(upcoming_df)} projected, MAE={mae}")
 
-    train_td = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"])
+    train_td = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"], drop_zero_debuts=False)
     upcoming_td = build_upcoming_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"], matchups)
     predicted_td = project_touchdowns(train_td, upcoming_td)
     assert ((predicted_td["td_probability"] >= 0) & (predicted_td["td_probability"] <= 1)).all(), "prob out of [0,1]"
@@ -126,7 +126,19 @@ def main():
     _test_parse_boxscore_position_fallback()
     print("[ok] boxscore: position fallback from stat category")
 
-    print(f"\nselftest passed ({checks + 4} sections)")
+    _test_top_per_team_covers_every_team()
+    print("[ok] projections: top_per_team guarantees every team a slot")
+
+    _test_evaluate_backtest()
+    print("[ok] evaluate: backtest joins projections to a later week's actuals")
+
+    _test_touchdown_training_keeps_zero_scoring_debuts()
+    print("[ok] features: drop_zero_debuts=False keeps non-scorers in a cold-start TD frame")
+
+    _test_band_width_reflects_player_consistency()
+    print("[ok] model: low-high band narrows for a consistent player, not just a global spread")
+
+    print(f"\nselftest passed ({checks + 8} sections)")
 
 
 def _test_get_current_week_advances_on_a_quiet_weekday():
@@ -226,6 +238,131 @@ def _test_parse_boxscore_position_fallback():
     assert rows["Real RB"]["position"] == "RB"
     assert rows["Mobile QB"]["opponent"] == "BUF"
     assert rows["Mobile QB"]["is_home"] == 0
+
+
+def _test_top_per_team_covers_every_team():
+    """Regression test for a real bug: sorting all players league-wide and
+    taking a flat head(20) let a handful of standout teams crowd out every
+    other game -- a week with ~16 games would show players from only 3-4 of
+    them. Three teams here have every top-scoring player; without the
+    per-team floor, the seven quiet teams would be shut out entirely.
+    """
+    import pandas as pd
+
+    rows = []
+    for team, scores in [
+        ("AAA", [30, 29, 28]), ("BBB", [27, 26, 25]), ("CCC", [24, 23, 22]),
+        ("DDD", [5]), ("EEE", [4]), ("FFF", [3]), ("GGG", [2]),
+        ("HHH", [1.5]), ("III", [1]), ("JJJ", [0.5]),
+    ]:
+        for i, score in enumerate(scores):
+            rows.append({"team": team, "player": f"{team} P{i}", "projection": score})
+    df = pd.DataFrame(rows)
+
+    result = top_per_team(df, "projection", per_team=1, limit=10)
+    assert set(result["team"]) == {r["team"] for r in rows}, (
+        f"every team should get at least one slot, got {sorted(result['team'])}"
+    )
+
+    starved = df.sort_values("projection", ascending=False).head(10)
+    assert set(starved["team"]) != set(df["team"]), (
+        "test fixture didn't actually reproduce the bug -- a flat head(10) should have starved some teams"
+    )
+
+
+def _test_evaluate_backtest():
+    """evaluate.py rebuilds a past week's projections from history alone and
+    joins them to that week's real results -- exercise the join end-to-end on
+    synthetic data so a key-spelling or accessor bug fails loudly here rather
+    than only ever showing up against live ESPN games."""
+    from evaluate import evaluate
+
+    gamelogs, pairings = synthetic_gamelogs(weeks=6)
+    history = gamelogs[gamelogs["week"] < 6]
+    actual = gamelogs[gamelogs["week"] == 6]
+    matchups = [
+        {"event_id": f"w6-{h}-{a}", "name": f"{a} @ {h}", "home": h, "away": a} for h, a in pairings
+    ]
+
+    report = evaluate(history, actual, matchups)
+    for category in ("passing", "rushing", "receiving"):
+        stats = report["categories"][category]
+        assert stats["n"] > 0, f"{category}: no players joined to actuals"
+        assert stats["mae"] >= 0
+        assert 0 <= stats["bandCoverage"] <= 100
+
+    td_stats = report["categories"]["touchdowns"]
+    assert td_stats["n"] > 0, "touchdowns: no players joined to actuals"
+    assert 0 <= td_stats["brier"] <= 1
+    assert 0 <= td_stats["actualScoreRate"] <= 100
+
+
+def _test_touchdown_training_keeps_zero_scoring_debuts():
+    """Regression test for a real bug found via evaluate.py: build_training_frame's
+    default filter drops any row with games_played == 0 and target == 0. On the
+    season's very first training frame (week 1 -> week 2 projections), EVERY row
+    is a debut, so with the default filter only week-1 touchdown scorers survive
+    -- the touchdown model trains exclusively on scorers and wildly overpredicts
+    (confirmed live: ~72% average predicted probability against an ~18% actual
+    score rate). drop_zero_debuts=False must keep the non-scorers too.
+    """
+    gamelogs, _ = synthetic_gamelogs(weeks=1)
+    gamelogs["td_total"] = gamelogs["rush_td"] + gamelogs["rec_td"]
+
+    scorers_only = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"])
+    assert (scorers_only["target"] > 0).all(), (
+        "with the default filter, a week-1-only training frame should contain only "
+        "scorers -- this is the bug being guarded against"
+    )
+
+    full = build_training_frame(gamelogs, "td_total", ["RB", "WR", "TE", "QB"], drop_zero_debuts=False)
+    assert (full["target"] == 0).any(), "non-scoring debut rows must survive with drop_zero_debuts=False"
+    assert len(full) > len(scorers_only), "the fixed path should keep strictly more rows than the buggy one"
+
+
+def _test_band_width_reflects_player_consistency():
+    """Regression test for a real (if less dramatic) bug: project_yardage used
+    to compute ONE pooled residual spread and apply it to every player at a
+    position, so a rock-steady veteran and a boom-bust role player projected
+    at the identical point value got identically-wide bands -- confirmed
+    against the checked-in sample predictions, where every player within a
+    category had the same band width to within float rounding. The band
+    should widen for a genuinely volatile player and narrow for a consistent
+    one, and fall back to the pooled spread for a player with no track
+    record (a debut) rather than an undefined or zero-width band.
+    """
+    rows = []
+    for week in range(1, 9):
+        # Steady Sam: 95 or 105 yards every game. Boom Bob: 20 or 180 --
+        # same mean (100), wildly different week-to-week variance.
+        rows.append(
+            _row(week, "AAA", "ZZZ", 1, "Steady Sam", "RB", rush_yards=95 + (week % 2) * 10)
+        )
+        rows.append(
+            _row(week, "BBB", "ZZZ", 1, "Boom Bob", "RB", rush_yards=20 if week % 2 else 180)
+        )
+
+    gamelogs = pd.DataFrame(rows)
+    # Separate matchups so both AAA and BBB (and so both players) get a
+    # valid upcoming opponent -- a single ZZZ-vs-AAA matchup would leave
+    # BBB with no mapped opponent and drop Boom Bob as a "bye week".
+    matchups = [
+        {"event_id": "next-aaa", "name": "ZZZ @ AAA", "home": "AAA", "away": "ZZZ"},
+        {"event_id": "next-bbb", "name": "ZZZ @ BBB", "home": "BBB", "away": "ZZZ"},
+    ]
+
+    train_df = build_training_frame(gamelogs, "rush_yards", ["RB"])
+    upcoming_df = build_upcoming_frame(gamelogs, "rush_yards", ["RB"], matchups)
+
+    predicted, _ = project_yardage(train_df, upcoming_df)
+    by_player = predicted.set_index("player")
+    sam_width = by_player.loc["Steady Sam", "high"] - by_player.loc["Steady Sam", "low"]
+    bob_width = by_player.loc["Boom Bob", "high"] - by_player.loc["Boom Bob", "low"]
+
+    assert sam_width < bob_width, (
+        f"a consistent player's band ({sam_width:.1f}) should be narrower than an equally-projected "
+        f"boom-bust player's ({bob_width:.1f}) -- this is the bug being guarded against"
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,154 @@
+{
+  "updatedAt": "2026-10-21T18:04:49.862270+00:00",
+  "isSample": false,
+  "overall": {
+    "n": 0,
+    "hits": 0,
+    "hitRate": null,
+    "units": 0.0,
+    "roi": null,
+    "expectedHitRate": null,
+    "mae": null
+  },
+  "byStat": {
+    "pts": {
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    "reb": {
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    "ast": {
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    "fg3m": {
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    "stl": {
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    "blk": {
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    "pra": {
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    "stocks": {
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    }
+  },
+  "topPicks": {
+    "n": 0,
+    "hits": 0,
+    "hitRate": null,
+    "units": 0.0,
+    "roi": null,
+    "expectedHitRate": null,
+    "mae": null
+  },
+  "calibration": [
+    {
+      "lo": 0.0,
+      "hi": 0.4,
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    {
+      "lo": 0.4,
+      "hi": 0.5,
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    {
+      "lo": 0.5,
+      "hi": 0.6,
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    {
+      "lo": 0.6,
+      "hi": 0.7,
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    },
+    {
+      "lo": 0.7,
+      "hi": 1.0,
+      "n": 0,
+      "hits": 0,
+      "hitRate": null,
+      "units": 0.0,
+      "roi": null,
+      "expectedHitRate": null,
+      "mae": null
+    }
+  ],
+  "days": []
+}

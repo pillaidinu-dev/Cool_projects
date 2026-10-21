@@ -166,6 +166,57 @@ def test_fetch_day_skips_preseason_and_missing_summaries():
     print("[ok] gamelogs: preseason filtered, a missing box score is skipped not fatal")
 
 
+def test_bootstrap_backfills_an_older_store():
+    """Regression test for the first live run: the old bootstrap stopped
+    after 40 game days of any kind, which right after opening night meant
+    almost only playoff games (16 teams). It now counts regular-season days,
+    skips non-real games, and backfills a store built by the old rule
+    (state.json without the current bootstrap version) on its next run."""
+    import gamelogs
+
+    class League:
+        """Day 0..9 before `today`: 2 regular-season days just behind us,
+        then 5 playoff days, then regular season again."""
+
+        def __init__(self, today):
+            self.today, self.summaries = today, 0
+            self.fake = FakeESPN(today - timedelta(days=40), days=40, now=today)
+
+        def kind(self, day):
+            back = (self.today - day).days
+            return 2 if back <= 2 or back > 7 else 3
+
+        def get_scoreboard(self, day):
+            return [{**e, "season_type": self.kind(day)} for e in self.fake.get_scoreboard(day)]
+
+        def get_event_summary(self, event_id):
+            self.summaries += 1
+            return self.fake.get_event_summary(event_id)
+
+    today = date(2026, 10, 22)
+    with tempfile.TemporaryDirectory() as tmp:
+        data = Path(tmp)
+        league = League(today)
+        old_day = today - timedelta(days=1)
+        gamelogs._write_day(data, old_day, gamelogs._fetch_day(league, old_day)[0])
+        (data / "state.json").write_text(json.dumps({"lastFetched": old_day.isoformat()}))
+        before = league.summaries
+
+        gamelogs.update(data, today, client=league, bootstrap_regular_days=6, log=quiet)
+        state = json.loads((data / "state.json").read_text())
+        assert state["bootstrap"] == gamelogs.BOOTSTRAP_VERSION and state["lastFetched"] == old_day.isoformat()
+        stored = sorted(p.stem for p in (data / "boxscores").glob("*.csv"))
+        regular = [d for d in stored if league.kind(date.fromisoformat(d)) == 2]
+        assert len(regular) >= 6, f"backfill should reach 6 regular-season days past the playoffs, got {stored}"
+        refetched = (league.summaries - before) // 3  # 3 games a day
+        assert refetched == len(stored) - 1, "the day already on disk shouldn't be fetched again"
+
+        league.summaries = 0
+        gamelogs.update(data, today, client=league, bootstrap_regular_days=6, log=quiet)
+        assert league.summaries == 0, "a store on the current bootstrap version shouldn't backfill again"
+    print("[ok] gamelogs: bootstrap counts regular-season days and backfills older stores")
+
+
 def test_lines_and_odds():
     assert prop_line(24.3) == 24.5 and prop_line(24.9) == 24.5 and prop_line(0.2) == 0.5
     assert p_over("pts", 30, 6, 24.5) > 0.5 > p_over("pts", 20, 6, 24.5)
@@ -178,5 +229,6 @@ if __name__ == "__main__":
     test_lines_and_odds()
     test_pricing()
     test_fetch_day_skips_preseason_and_missing_summaries()
+    test_bootstrap_backfills_an_older_store()
     test_pipeline()
     print("\nselftest passed")

@@ -6,6 +6,9 @@ with its own client/server, README, and Dockerfile.
 - **[PlanSync](#plansync)** (`client/`, `server/`) — an activity-based matching dating app.
 - **[NFL Week Live](nfl-dashboard/README.md)** (`nfl-dashboard/`) — a live dashboard for a full
   NFL week's scores, stat leaders, and touchdown scorers.
+- **[NBA Props Live](nba-dashboard/README.md)** (`nba-dashboard/`) — live NBA scores and leaders,
+  daily player-prop projections (points, rebounds, assists, threes, steals, blocks), and a
+  season-long tracker that saves and grades every projection.
 
 ---
 

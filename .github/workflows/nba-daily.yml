@@ -8,13 +8,23 @@ name: NBA daily props
 # earlier in winter).
 #
 # GitHub only runs scheduled (and manually dispatched) workflows from the
-# repo's *default* branch, so this file has to be on that branch to run at
-# all. It always checks out and commits to main, whichever branch that is.
+# repo's *default* branch, so this file has to be on that branch for those
+# to work. It always checks out and commits to main, whichever branch that
+# is. A push to main that changes the pipeline also runs it (push triggers
+# work from any branch), so code changes take effect without waiting for
+# the next scheduled run. The job's own data commits never re-trigger it:
+# pushes made with GITHUB_TOKEN don't start workflows, and data/ isn't in
+# the paths below anyway.
 on:
   schedule:
     - cron: '17 14 * * *'
     - cron: '47 21 * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/nba-daily.yml
+      - nba-dashboard/ml/**
 
 permissions:
   contents: write

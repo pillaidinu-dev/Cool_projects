@@ -22,8 +22,14 @@ def _ymd(day):
     return day.strftime("%Y%m%d")
 
 
+# ESPN season types: 1 preseason, 2 regular season, 3 playoffs, 4 off-season
+# (All-Star), 5 play-in. Only real games are worth training on.
+REAL_GAME_SEASON_TYPES = {2, 3, 5}
+
+
 def summarize_event(event):
-    """{id, name, date, state, home, away} where home/away are {id, abbr}."""
+    """{id, name, date, state, season_type, home, away} where home/away are
+    {id, abbr}."""
     competition = (event.get("competitions") or [{}])[0]
     sides = {}
     for c in competition.get("competitors", []) or []:
@@ -34,6 +40,7 @@ def summarize_event(event):
         "name": event.get("shortName") or event.get("name", ""),
         "date": event.get("date"),
         "state": ((event.get("status") or {}).get("type") or {}).get("state"),  # pre | in | post
+        "season_type": (event.get("season") or {}).get("type"),
         "home": sides.get("home", {}),
         "away": sides.get("away", {}),
     }

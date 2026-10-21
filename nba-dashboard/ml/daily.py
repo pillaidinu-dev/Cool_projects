@@ -76,7 +76,7 @@ def run(data_dir, today, client=espn_client, force=False, is_sample=False, log=_
     last_fetched = gamelogs.read_state(data_dir).get("lastFetched")
     graded = grade_pending(data_dir, last_fetched, day_loader(logs))
 
-    games = client.get_scoreboard(today)
+    games = [g for g in client.get_scoreboard(today) if gamelogs.is_real_game(g)]
     out = projections_dir(data_dir) / f"{today.isoformat()}.json"
     started = any(g["state"] != "pre" for g in games)
     if not games:

@@ -152,6 +152,14 @@ export default function PropsBoard({ slate, live }) {
                           {player.pos ? `${player.pos} · ` : ''}
                           {player.team} {player.home ? 'vs' : '@'} {player.opp}
                         </span>
+                        {player.flags?.length > 0 && (
+                          <span
+                            className="ml-1.5 text-[10px] uppercase font-semibold text-sky-300 cursor-help"
+                            title={`${player.flags.join('; ')}. Last game ${player.lastPlayed}. Kept out of the top 10 edges.`}
+                          >
+                            ⓘ {player.flags[0]}
+                          </span>
+                        )}
                         {player.status && (
                           <span className="ml-1.5 text-[10px] uppercase font-semibold text-amber-400">⚠ {player.status}</span>
                         )}

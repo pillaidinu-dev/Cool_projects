@@ -54,6 +54,7 @@ def test_pipeline():
         assert not any("Deep Bench" in n for n in names), "sub-12-minute players should be filtered out"
         assert "BOS Sixth Man" not in names, "players ruled Out on the roster should be excluded"
         for p in players:
+            assert isinstance(p["flags"], list) and p["lastPlayed"]
             assert p["props"] and set(p["props"]) <= set(STATS), f"{p['name']}: {set(p['props'])}"
             for stat, prop in p["props"].items():
                 assert 0 <= prop["pOver"] <= 1 and 0 <= prop["pFair"] <= 1, f"{stat} probability out of range"
@@ -217,6 +218,32 @@ def test_bootstrap_backfills_an_older_store():
     print("[ok] gamelogs: bootstrap counts regular-season days and backfills older stores")
 
 
+def test_history_flags():
+    """Flags the two cases where a player's rolling history doesn't describe
+    tonight: he sat out his team's recent games, or he changed teams. A
+    team simply not playing (eliminated, off-season) is not a flag."""
+    from features import player_form
+    from projections import history_flags
+
+    def g(pid, team, day):
+        return {"player_id": pid, "player": pid, "team": team, "position": "G", "date": pd.Timestamp(day), "min": 30.0}
+
+    import pandas as pd
+    rows = [g("regular", "AAA", f"2026-04-0{d}") for d in range(1, 9)]
+    rows += [g("hurt", "AAA", f"2026-04-0{d}") for d in range(1, 4)]  # sat out AAA's last 5
+    rows += [g("traded", "BBB", "2026-04-08")]
+    rows += [g("eliminated", "CCC", "2026-04-03")]  # CCC's season ended; nobody missed anything
+    logs = pd.DataFrame(rows)
+    form = player_form(logs, date(2026, 10, 21))
+    slate = [{"player_id": pid, "team": team} for pid, team in
+             [("regular", "AAA"), ("hurt", "AAA"), ("traded", "AAA"), ("eliminated", "CCC")]]
+    flags = history_flags(logs, form, slate)
+    assert set(flags) == {"hurt", "traded"}, flags
+    assert flags["hurt"] == ["Missed his team's last 5 games"]
+    assert flags["traded"] == ["New team (last played for BBB)"]
+    print("[ok] projections: flags missed-games and new-team players only")
+
+
 def test_lines_and_odds():
     assert prop_line(24.3) == 24.5 and prop_line(24.9) == 24.5 and prop_line(0.2) == 0.5
     assert p_over("pts", 30, 6, 24.5) > 0.5 > p_over("pts", 20, 6, 24.5)
@@ -230,5 +257,6 @@ if __name__ == "__main__":
     test_pricing()
     test_fetch_day_skips_preseason_and_missing_summaries()
     test_bootstrap_backfills_an_older_store()
+    test_history_flags()
     test_pipeline()
     print("\nselftest passed")

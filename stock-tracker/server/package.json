@@ -1,0 +1,19 @@
+{
+  "name": "stock-tracker-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --no-warnings src/index.js",
+    "dev": "node --no-warnings --watch src/index.js",
+    "demo": "PRICE_SOURCE=demo node --no-warnings --watch src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

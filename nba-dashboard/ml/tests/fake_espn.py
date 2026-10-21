@@ -55,6 +55,7 @@ class FakeESPN:
             "id": game["id"],
             "shortName": f"{game['away']} @ {game['home']}",
             "date": f"{day.isoformat()}T23:30Z",
+            "season": {"year": 2027, "type": 2},
             "status": {"type": {"state": state, "shortDetail": "Final" if state == "post" else "7:30 PM ET"}},
             "competitions": [
                 {

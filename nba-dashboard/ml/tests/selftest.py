@@ -133,6 +133,39 @@ def test_pricing():
     print("[ok] grade: leans priced against the L10-average line")
 
 
+def test_fetch_day_skips_preseason_and_missing_summaries():
+    """Regression test for the first live run: ESPN 404'd one game's
+    summary during the bootstrap and the whole run died. Preseason games are
+    now filtered out, and any single unservable summary is skipped."""
+    import requests
+
+    import gamelogs
+    from fake_espn import FakeESPN
+
+    day = date(2026, 10, 2)
+    fake = FakeESPN(date(2026, 10, 1), days=5, now=date(2026, 10, 5))
+    real = fake.get_scoreboard(day)
+    missing_id, kept = real[0]["id"], real[1:]
+
+    class Client:
+        def get_scoreboard(self, _day):
+            preseason = {**real[0], "id": "pre1", "season_type": 1}
+            return real + [preseason]
+
+        def get_event_summary(self, event_id):
+            if event_id in (missing_id, "pre1"):
+                raise requests.HTTPError(f"404 Client Error: Not Found for event {event_id}")
+            return fake.get_event_summary(event_id)
+
+    logged = []
+    rows, had_games = gamelogs._fetch_day(Client(), day, log=logged.append)
+    assert had_games and rows
+    assert {r["event_id"] for r in rows} == {e["id"] for e in kept}, "kept games should all be parsed"
+    assert len(logged) == 1 and missing_id in logged[0], logged
+    assert gamelogs.is_real_game({"season_type": None}) and not gamelogs.is_real_game({"season_type": 1})
+    print("[ok] gamelogs: preseason filtered, a missing box score is skipped not fatal")
+
+
 def test_lines_and_odds():
     assert prop_line(24.3) == 24.5 and prop_line(24.9) == 24.5 and prop_line(0.2) == 0.5
     assert p_over("pts", 30, 6, 24.5) > 0.5 > p_over("pts", 20, 6, 24.5)
@@ -144,5 +177,6 @@ if __name__ == "__main__":
     test_parse_boxscore()
     test_lines_and_odds()
     test_pricing()
+    test_fetch_day_skips_preseason_and_missing_summaries()
     test_pipeline()
     print("\nselftest passed")

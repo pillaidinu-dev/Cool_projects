@@ -33,7 +33,7 @@ function ResultCell({ player, stat, prop, live }) {
 
 // Every player's projection for one market: filterable, sortable, and —
 // for a slate that's live or already graded — showing how it's going.
-export default function PropsBoard({ slate, live }) {
+export default function PropsBoard({ slate, live, chart = true }) {
   const [stat, setStat] = useState('pts');
   const [team, setTeam] = useState('');
   const [query, setQuery] = useState('');
@@ -88,9 +88,9 @@ export default function PropsBoard({ slate, live }) {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5 items-start">
+      <div className={`grid gap-6 items-start ${chart ? 'lg:grid-cols-5' : ''}`}>
         <Card
-          className="lg:col-span-3"
+          className={chart ? 'lg:col-span-3' : ''}
           title={`${meta.label} props`}
           aside={metric ? `backtest MAE ${metric.mae} vs L10 avg ${metric.baselineMae}` : undefined}
         >
@@ -191,9 +191,11 @@ export default function PropsBoard({ slate, live }) {
           )}
         </Card>
 
-        <div className="lg:col-span-2">
-          <ProjectionChart title={`Top ${meta.label} projections`} unit={meta.short.toLowerCase()} rows={chartRows} />
-        </div>
+        {chart && (
+          <div className="lg:col-span-2">
+            <ProjectionChart title={`Top ${meta.label} projections`} unit={meta.short.toLowerCase()} rows={chartRows} />
+          </div>
+        )}
       </div>
     </div>
   );

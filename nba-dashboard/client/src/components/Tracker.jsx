@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Card from './Card.jsx';
 import HitRateChart from './HitRateChart.jsx';
 import PropsBoard from './PropsBoard.jsx';
+import GameBoard from './GameBoard.jsx';
 import BestPicks from './BestPicks.jsx';
 import { fetchSlate } from '../api.js';
 import { STATS, formatDate, pct, signed } from '../stats.js';
@@ -23,6 +24,7 @@ export default function Tracker({ history, dates }) {
   const gradedDates = dates.filter((d) => history.days?.some((day) => day.date === d));
   const [selected, setSelected] = useState('');
   const [slate, setSlate] = useState(null);
+  const [view, setView] = useState('game');
   const date = selected || gradedDates[0];
 
   useEffect(() => {
@@ -134,8 +136,34 @@ export default function Tracker({ history, dates }) {
           </div>
           {slate && slate.date === date && (
             <>
+              <p className="text-xs text-slate-500 -mt-2">
+                {slate.players.length} players projected · {slate.players.filter((p) => p.actual).length} played and were graded ·{' '}
+                {slate.players.filter((p) => p.actual === null).length} didn&apos;t play (their props are void and not counted)
+              </p>
               <BestPicks slate={slate} />
-              <PropsBoard key={date} slate={slate} />
+              <div className="flex gap-1 self-start rounded-lg border border-slate-700 p-0.5" role="group" aria-label="View">
+                {[
+                  ['game', 'By game'],
+                  ['market', 'By market'],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setView(key)}
+                    aria-pressed={view === key}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold ${
+                      view === key ? 'bg-slate-100 text-slate-900' : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {view === 'game' ? (
+                <GameBoard key={date} slate={slate} />
+              ) : (
+                <PropsBoard key={date} slate={slate} chart={false} />
+              )}
             </>
           )}
         </section>

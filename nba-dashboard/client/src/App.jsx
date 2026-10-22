@@ -174,6 +174,14 @@ export default function App() {
               )}
             </div>
 
+            {!slate.isSample && !slate.note && slate.date && slate.date.replaceAll('-', '') < today && (
+              <div className="rounded-xl bg-amber-950/40 border border-amber-800/50 px-4 py-3 text-sm text-amber-200">
+                Today&apos;s slate hasn&apos;t loaded yet, so this is the{' '}
+                {formatDate(slate.date, { weekday: 'long', month: 'short', day: 'numeric' })} slate. The daily refresh runs
+                several times each morning; check back shortly.
+              </div>
+            )}
+
             {slate.note && !slate.isSample && (
               <div className="rounded-xl bg-sky-950/40 border border-sky-800/50 px-4 py-3 text-sm text-sky-200">{slate.note}</div>
             )}

@@ -39,6 +39,7 @@ export default function BestPicks({ slate, limit = 10 }) {
                 <span className="text-xs tabular-nums text-slate-500">
                   edge +{pct(edge(prop))}
                   {player.actual && <> · <ResultBadge result={prop.result} /></>}
+                  {slate.graded && player.actual === null && <> · <span className="text-slate-400">void (did not play)</span></>}
                 </span>
               </div>
             </li>

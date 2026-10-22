@@ -18,6 +18,14 @@ function currentValue(player, stat, live) {
 function PropCell({ player, stat, live }) {
   const prop = player.props[stat];
   if (!prop) return <td className="px-2 py-2 text-center text-slate-600">–</td>;
+  if (player.actual === null) {
+    return (
+      <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap text-slate-600" title="Did not play: void">
+        {prop.proj}
+        <span className="block text-xs">{prop.line}</span>
+      </td>
+    );
+  }
   const side = lean(prop);
   const value = currentValue(player, stat, live);
   const title =
@@ -29,8 +37,14 @@ function PropCell({ player, stat, live }) {
       <span className={`ml-1 text-xs ${side === 'over' ? 'text-sky-300' : 'text-amber-300'}`}>{side === 'over' ? '▲' : '▼'}</span>
       <span className="block text-xs text-slate-500">
         {prop.line}
-        {value != null && (
-          <span className={`ml-1 font-semibold ${value > prop.line ? 'text-emerald-400' : 'text-slate-300'}`}>· {value}</span>
+        {value != null && prop.result ? (
+          <span className={`ml-1 font-semibold ${prop.result === 'hit' ? 'text-emerald-400' : 'text-rose-400'}`}>
+            · {value} {prop.result === 'hit' ? '✓' : '✗'}
+          </span>
+        ) : (
+          value != null && (
+            <span className={`ml-1 font-semibold ${value > prop.line ? 'text-emerald-400' : 'text-slate-300'}`}>· {value}</span>
+          )
         )}
       </span>
     </td>
@@ -68,6 +82,9 @@ function TeamTable({ team, opponent, home, players, live }) {
                   </span>
                 )}
                 {p.status && <span className="block text-[10px] uppercase font-semibold text-amber-400">⚠ {p.status}</span>}
+                {p.actual === null && (
+                  <span className="block text-[10px] uppercase font-semibold text-slate-400">Did not play · props void</span>
+                )}
               </td>
               {STATS.map((s) => (
                 <PropCell key={s.key} player={p} stat={s.key} live={live} />
@@ -105,7 +122,9 @@ export default function GameBoard({ slate, live }) {
       </div>
       <p className="text-xs text-slate-500 -mt-2">
         Each cell: projection with the lean (▲ over, ▼ under), then the line
-        {slate.graded ? ' and the actual result' : ' and, once the game starts, his current stat'} (green when it&apos;s over the line).
+        {slate.graded
+          ? ' and the actual stat: ✓ green when the lean hit, ✗ red when it missed. Players who sat out are void and greyed.'
+          : ' and, once the game starts, his current stat (green when it’s over the line).'}{' '}
         Hover a cell for the over %, fair %, edge and recent averages.
       </p>
       {games.map((g) => {

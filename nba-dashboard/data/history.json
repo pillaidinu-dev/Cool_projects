@@ -1,153 +1,153 @@
 {
-  "updatedAt": "2026-10-22T23:40:20.737503+00:00",
+  "updatedAt": "2026-10-23T15:45:54.271726+00:00",
   "isSample": false,
   "overall": {
-    "n": 878,
-    "hits": 543,
-    "hitRate": 0.618,
-    "units": 160.14,
-    "roi": 0.182,
-    "expectedHitRate": 0.599,
-    "mae": 3.38
+    "n": 1055,
+    "hits": 668,
+    "hitRate": 0.633,
+    "units": 226.29,
+    "roi": 0.214,
+    "expectedHitRate": 0.601,
+    "mae": 3.34
   },
   "byStat": {
     "pts": {
-      "n": 160,
-      "hits": 87,
-      "hitRate": 0.544,
-      "units": 13.6,
-      "roi": 0.085,
-      "expectedHitRate": 0.573,
-      "mae": 5.9
+      "n": 192,
+      "hits": 104,
+      "hitRate": 0.542,
+      "units": 15.65,
+      "roi": 0.082,
+      "expectedHitRate": 0.576,
+      "mae": 5.76
     },
     "reb": {
-      "n": 127,
-      "hits": 77,
-      "hitRate": 0.606,
-      "units": 24.16,
-      "roi": 0.19,
-      "expectedHitRate": 0.581,
-      "mae": 2.3
+      "n": 152,
+      "hits": 92,
+      "hitRate": 0.605,
+      "units": 29.44,
+      "roi": 0.194,
+      "expectedHitRate": 0.577,
+      "mae": 2.33
     },
     "ast": {
-      "n": 104,
-      "hits": 65,
-      "hitRate": 0.625,
-      "units": 25.22,
-      "roi": 0.242,
-      "expectedHitRate": 0.585,
-      "mae": 1.89
+      "n": 127,
+      "hits": 83,
+      "hitRate": 0.654,
+      "units": 37.91,
+      "roi": 0.299,
+      "expectedHitRate": 0.59,
+      "mae": 1.92
     },
     "fg3m": {
-      "n": 117,
-      "hits": 81,
-      "hitRate": 0.692,
-      "units": 30.92,
-      "roi": 0.264,
-      "expectedHitRate": 0.628,
-      "mae": 1.07
+      "n": 140,
+      "hits": 102,
+      "hitRate": 0.729,
+      "units": 45.94,
+      "roi": 0.328,
+      "expectedHitRate": 0.629,
+      "mae": 1.05
     },
     "stl": {
-      "n": 95,
-      "hits": 53,
-      "hitRate": 0.558,
-      "units": -3.22,
-      "roi": -0.034,
-      "expectedHitRate": 0.644,
-      "mae": 0.93
-    },
-    "blk": {
-      "n": 44,
-      "hits": 30,
-      "hitRate": 0.682,
-      "units": 7.93,
-      "roi": 0.18,
-      "expectedHitRate": 0.651,
+      "n": 113,
+      "hits": 67,
+      "hitRate": 0.593,
+      "units": 6.54,
+      "roi": 0.058,
+      "expectedHitRate": 0.648,
       "mae": 0.94
     },
+    "blk": {
+      "n": 53,
+      "hits": 38,
+      "hitRate": 0.717,
+      "units": 12.69,
+      "roi": 0.239,
+      "expectedHitRate": 0.663,
+      "mae": 0.92
+    },
     "pra": {
-      "n": 158,
-      "hits": 93,
-      "hitRate": 0.589,
-      "units": 27.65,
-      "roi": 0.175,
-      "expectedHitRate": 0.577,
-      "mae": 7.61
+      "n": 190,
+      "hits": 114,
+      "hitRate": 0.6,
+      "units": 37.67,
+      "roi": 0.198,
+      "expectedHitRate": 0.58,
+      "mae": 7.46
     },
     "stocks": {
-      "n": 73,
-      "hits": 57,
-      "hitRate": 0.781,
-      "units": 33.89,
-      "roi": 0.464,
-      "expectedHitRate": 0.619,
-      "mae": 1.11
+      "n": 88,
+      "hits": 68,
+      "hitRate": 0.773,
+      "units": 40.47,
+      "roi": 0.46,
+      "expectedHitRate": 0.62,
+      "mae": 1.12
     }
   },
   "topPicks": {
-    "n": 10,
-    "hits": 6,
-    "hitRate": 0.6,
-    "units": 2.26,
-    "roi": 0.226,
-    "expectedHitRate": 0.771,
-    "mae": 4.67
+    "n": 20,
+    "hits": 15,
+    "hitRate": 0.75,
+    "units": 10.59,
+    "roi": 0.529,
+    "expectedHitRate": 0.756,
+    "mae": 3.24
   },
   "calibration": [
     {
       "lo": 0.0,
       "hi": 0.4,
-      "n": 16,
-      "hits": 4,
-      "hitRate": 0.25,
-      "units": -1.54,
-      "roi": -0.096,
-      "expectedHitRate": 0.319,
-      "mae": 0.91
+      "n": 21,
+      "hits": 7,
+      "hitRate": 0.333,
+      "units": 3.18,
+      "roi": 0.152,
+      "expectedHitRate": 0.331,
+      "mae": 1.03
     },
     {
       "lo": 0.4,
       "hi": 0.5,
-      "n": 91,
-      "hits": 40,
-      "hitRate": 0.44,
-      "units": -1.11,
-      "roi": -0.012,
-      "expectedHitRate": 0.472,
-      "mae": 2.52
+      "n": 109,
+      "hits": 52,
+      "hitRate": 0.477,
+      "units": 8.17,
+      "roi": 0.075,
+      "expectedHitRate": 0.471,
+      "mae": 2.5
     },
     {
       "lo": 0.5,
       "hi": 0.6,
-      "n": 393,
-      "hits": 216,
-      "hitRate": 0.55,
-      "units": 37.69,
-      "roi": 0.096,
-      "expectedHitRate": 0.551,
-      "mae": 4.59
+      "n": 451,
+      "hits": 245,
+      "hitRate": 0.543,
+      "units": 38.5,
+      "roi": 0.085,
+      "expectedHitRate": 0.552,
+      "mae": 4.51
     },
     {
       "lo": 0.6,
       "hi": 0.7,
-      "n": 219,
-      "hits": 157,
-      "hitRate": 0.717,
-      "units": 74.38,
-      "roi": 0.34,
+      "n": 278,
+      "hits": 206,
+      "hitRate": 0.741,
+      "units": 110.5,
+      "roi": 0.397,
       "expectedHitRate": 0.643,
-      "mae": 2.94
+      "mae": 3.12
     },
     {
       "lo": 0.7,
       "hi": 1.0,
-      "n": 159,
-      "hits": 126,
-      "hitRate": 0.792,
-      "units": 50.72,
-      "roi": 0.319,
-      "expectedHitRate": 0.757,
-      "mae": 1.75
+      "n": 196,
+      "hits": 158,
+      "hitRate": 0.806,
+      "units": 65.95,
+      "roi": 0.336,
+      "expectedHitRate": 0.758,
+      "mae": 1.67
     }
   ],
   "days": [
@@ -168,6 +168,25 @@
         "roi": 0.226,
         "expectedHitRate": 0.771,
         "mae": 4.67
+      }
+    },
+    {
+      "date": "2026-10-22",
+      "n": 177,
+      "hits": 125,
+      "hitRate": 0.706,
+      "units": 66.15,
+      "roi": 0.374,
+      "expectedHitRate": 0.614,
+      "mae": 3.12,
+      "top": {
+        "n": 10,
+        "hits": 9,
+        "hitRate": 0.9,
+        "units": 8.33,
+        "roi": 0.833,
+        "expectedHitRate": 0.742,
+        "mae": 1.81
       }
     }
   ]

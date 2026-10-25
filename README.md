@@ -13,6 +13,8 @@ with its own client/server, README, and Dockerfile.
 - **[NBA Props Live](nba-dashboard/README.md)** (`nba-dashboard/`) — live NBA scores and leaders,
   daily player-prop projections (points, rebounds, assists, threes, steals, blocks), and a
   season-long tracker that saves and grades every projection.
+- **[Powerball Pattern Analysis](powerball-analysis/README.md)** (`powerball-analysis/`) — number
+  frequencies, randomness tests, and a hot-number backtest over every draw since 2015.
 
 ---
 

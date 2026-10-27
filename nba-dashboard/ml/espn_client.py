@@ -6,16 +6,35 @@ field is read defensively.
 NBA games are bucketed by US Eastern calendar date (a 10:30pm ET tip still
 belongs to that day's slate), which is also how ESPN's `dates=` param works.
 """
+import time
+
 import requests
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
 TIMEOUT = 20
+ATTEMPTS = 3
 
 
 def _get(path, **params):
-    res = requests.get(f"{BASE}/{path}", params=params, timeout=TIMEOUT)
-    res.raise_for_status()
-    return res.json()
+    """GET a JSON endpoint, retrying ESPN's transient failures — a 5xx, a
+    dropped connection, or (seen in production on 2026-10-27) a 200 with an
+    empty body. A 4xx is a real answer and is raised straight away."""
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            res = requests.get(f"{BASE}/{path}", params=params, timeout=TIMEOUT)
+            if res.status_code < 500:
+                res.raise_for_status()
+                return res.json()
+            res.raise_for_status()
+        except requests.HTTPError as err:
+            if err.response is not None and err.response.status_code < 500:
+                raise
+            if attempt == ATTEMPTS:
+                raise
+        except (requests.ConnectionError, requests.Timeout, ValueError):
+            if attempt == ATTEMPTS:
+                raise
+        time.sleep(2 * attempt)
 
 
 def _ymd(day):

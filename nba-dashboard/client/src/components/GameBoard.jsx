@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Card from './Card.jsx';
-import { STATS, edge, lean, pct } from '../stats.js';
+import { STATS, edge, fmtActual, fmtProj, fmtRecent, isYesNo, lean, pct } from '../stats.js';
 
 function tipTime(start) {
   if (!start) return '';
@@ -21,29 +21,32 @@ function PropCell({ player, stat, live }) {
   if (player.actual === null) {
     return (
       <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap text-slate-600" title="Did not play: void">
-        {prop.proj}
-        <span className="block text-xs">{prop.line}</span>
+        {fmtProj(stat, prop)}
+        <span className="block text-xs">{isYesNo(stat) ? '' : prop.line}</span>
       </td>
     );
   }
   const side = lean(prop);
   const value = currentValue(player, stat, live);
   const title =
-    `${STATS.find((s) => s.key === stat).label}: line ${prop.line}, projection ${prop.proj} (${prop.lo}–${prop.hi}). ` +
-    `Over ${pct(prop.pOver)} vs fair ${pct(prop.pFair)} → ${side} by ${pct(edge(prop))}. L5 ${prop.l5}, L10 ${prop.l10}.`;
+    (isYesNo(stat)
+      ? `Double-double: model ${pct(prop.pOver)} vs fair ${pct(prop.pFair)} → ${side === 'over' ? 'yes' : 'no'} by ${pct(edge(prop))}. `
+      : `${STATS.find((s) => s.key === stat).label}: line ${prop.line}, projection ${prop.proj} (${prop.lo}–${prop.hi}). ` +
+        `Over ${pct(prop.pOver)} vs fair ${pct(prop.pFair)} → ${side} by ${pct(edge(prop))}. `) +
+    `L5 ${fmtRecent(stat, prop.l5)}, L10 ${fmtRecent(stat, prop.l10)}.`;
   return (
     <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap" title={title}>
-      <span className="font-semibold text-white">{prop.proj}</span>
+      <span className="font-semibold text-white">{fmtProj(stat, prop)}</span>
       <span className={`ml-1 text-xs ${side === 'over' ? 'text-sky-300' : 'text-amber-300'}`}>{side === 'over' ? '▲' : '▼'}</span>
       <span className="block text-xs text-slate-500">
-        {prop.line}
+        {isYesNo(stat) ? '' : prop.line}
         {value != null && prop.result ? (
           <span className={`ml-1 font-semibold ${prop.result === 'hit' ? 'text-emerald-400' : 'text-rose-400'}`}>
-            · {value} {prop.result === 'hit' ? '✓' : '✗'}
+            · {fmtActual(stat, value)} {prop.result === 'hit' ? '✓' : '✗'}
           </span>
         ) : (
           value != null && (
-            <span className={`ml-1 font-semibold ${value > prop.line ? 'text-emerald-400' : 'text-slate-300'}`}>· {value}</span>
+            <span className={`ml-1 font-semibold ${value > prop.line ? 'text-emerald-400' : 'text-slate-300'}`}>· {fmtActual(stat, value)}</span>
           )
         )}
       </span>

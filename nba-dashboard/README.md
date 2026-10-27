@@ -85,6 +85,13 @@ as sample data.
   Poisson tail for 3PM/STL/BLK/STL+BLK.
 - **Backtest**: each market's MAE on the most recent ~20% of dates, set next to a plain L10
   average on the same games. You can see whether the model beats the naive baseline.
+- **Double-doubles** (`ml/dd.py`, the **DD** market): each category's chance of reaching 10
+  (points, rebounds, assists, steals, blocks) comes from the same per-stat models. Combined as
+  if independent they give P(2+ categories), which runs a little low because one big night
+  tends to lift the others, so a logistic calibration on history, with the player's recent
+  double-double rate as a second input, corrects it. On real 2026 box scores it beat the plain
+  L10 rate (Brier 0.052 vs 0.058, log loss 0.182 vs 0.219) and its probabilities matched
+  observed frequencies. It's a yes/no market: the fair price is the smoothed L10 rate.
 - **Lines and pricing**: there's no free source of real sportsbook lines, so each line is the
   x.5 nearest the player's L10 average. Raw hit rate against those lines would mostly measure
   where the line sits: a 1.4 spg player's 1.5 steals line goes under about 60% of the time no

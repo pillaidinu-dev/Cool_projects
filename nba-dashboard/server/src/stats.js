@@ -87,6 +87,8 @@ export function parseBoxscore(summary, game) {
           tov: toNumber(lookup(labels, keys, stats, 'tov')),
           pra: pts + reb + ast,
           stocks: stl + blk,
+          // 1 for a double-double (10+ in two of these), else 0 — the dd market.
+          dd: Number([pts, reb, ast, stl, blk].filter((v) => v >= 10).length >= 2),
         });
       }
     }

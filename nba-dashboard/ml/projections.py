@@ -4,7 +4,8 @@ from datetime import timedelta
 
 import pandas as pd
 
-from features import STATS, build_training_frame, build_upcoming_frame
+import dd
+from features import DD_CATS, STATS, build_training_frame, build_upcoming_frame
 from model import backtest, p_over, prop_line, project
 
 # Rotation players only — a 6-minute bench guy's "prop" isn't one anyone posts.
@@ -14,6 +15,10 @@ RECENT_DAYS = 21
 # nobody books "a point guard's blocks, under 0.5", and those near-certain
 # unders would otherwise crowd the top leans and flatter the tracker.
 MIN_L10 = {"pts": 5, "reb": 3, "ast": 2, "fg3m": 1, "stl": 0.8, "blk": 0.8, "pra": 10, "stocks": 1.5}
+# Double-doubles are only posted for players with a real shot at one: a
+# model chance of at least 5%, or one in each of his last ten games or so.
+DD_MIN_PROB = 0.05
+DD_MIN_L10 = 0.1
 
 
 def _fallback_roster(form, team_abbr, today):
@@ -95,6 +100,36 @@ def history_flags(logs, form, slate):
     return flags
 
 
+def _add_double_doubles(players, logs, form, slate, today, metrics):
+    """The yes/no double-double market (see dd.py). Its line is 0.5 on a 1/0
+    outcome, so `proj` and `pOver` are both the model's chance of one, and
+    l5/l10 are recent double-double rates."""
+    bundle = dd.fit(logs)
+    metrics["dd"] = dd.backtest(logs)
+    if bundle is None:
+        return
+    rows = {c: build_upcoming_frame(logs, c, slate, form, today).set_index("player_id") for c in DD_CATS + ["dd"]}
+    ids = rows["dd"].index
+    for c in DD_CATS:
+        ids = ids.intersection(rows[c].index)
+    if ids.empty:
+        return
+    l10 = rows["dd"].loc[ids, "l10"]
+    chance = dd.predict(bundle, {c: rows[c].loc[ids] for c in DD_CATS}, l10)
+    fair = dd.fair_price(l10)
+    for pid, p_dd, p_fair, l10_rate, l5_rate in zip(ids, chance, fair, l10, rows["dd"].loc[ids, "l5"]):
+        if p_dd < DD_MIN_PROB and l10_rate < DD_MIN_L10:
+            continue
+        players[pid]["props"]["dd"] = {
+            "proj": _r(p_dd, 3),
+            "line": 0.5,
+            "pOver": _r(p_dd, 3),
+            "pFair": _r(p_fair, 3),
+            "l5": _r(l5_rate, 2),
+            "l10": _r(l10_rate, 2),
+        }
+
+
 def _r(value, digits=1):
     return round(float(value), digits)
 
@@ -141,6 +176,8 @@ def build_projections(logs, form, slate, games, today):
                 "l5": _r(row.l5),
                 "l10": _r(row.l10),
             }
+
+    _add_double_doubles(players, logs, form, slate, today, metrics)
 
     return {
         "date": today.isoformat(),

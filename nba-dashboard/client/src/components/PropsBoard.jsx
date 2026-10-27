@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Card from './Card.jsx';
 import LeanPill, { ResultBadge } from './LeanPill.jsx';
 import ProjectionChart from './ProjectionChart.jsx';
-import { STATS, STAT_BY_KEY, edge, lean, pct } from '../stats.js';
+import { STATS, STAT_BY_KEY, edge, fmtActual, fmtLine, fmtProj, fmtRecent, isYesNo, lean, pct } from '../stats.js';
 
 const SORTS = [
   { key: 'edge', label: 'Edge' },
@@ -15,7 +15,7 @@ function ResultCell({ player, stat, prop, live }) {
   if (player.actual) {
     return (
       <span className="flex items-center justify-end gap-2">
-        <span className="tabular-nums text-slate-200">{player.actual[stat]}</span>
+        <span className="tabular-nums text-slate-200">{fmtActual(stat, player.actual[stat])}</span>
         <ResultBadge result={prop.result} compact />
       </span>
     );
@@ -25,7 +25,7 @@ function ResultCell({ player, stat, prop, live }) {
   const value = now[stat] ?? 0;
   return (
     <span className="flex items-center justify-end gap-1.5 tabular-nums">
-      <span className={value > prop.line ? 'text-emerald-300 font-semibold' : 'text-slate-200'}>{value}</span>
+      <span className={value > prop.line ? 'text-emerald-300 font-semibold' : 'text-slate-200'}>{fmtActual(stat, value)}</span>
       <span className="text-xs text-slate-500">{now.gameState === 'in' ? `${now.min}m · live` : 'final'}</span>
     </span>
   );
@@ -67,6 +67,9 @@ export default function PropsBoard({ slate, live, chart = true }) {
   );
 
   const metric = slate.metrics?.[stat];
+  // No projection chart for the yes/no double-double market, so its table
+  // takes the full width.
+  const showChart = chart && !isYesNo(stat);
   const meta = STAT_BY_KEY[stat];
 
   return (
@@ -88,11 +91,17 @@ export default function PropsBoard({ slate, live, chart = true }) {
         ))}
       </div>
 
-      <div className={`grid gap-6 items-start ${chart ? 'lg:grid-cols-5' : ''}`}>
+      <div className={`grid gap-6 items-start ${showChart ? 'lg:grid-cols-5' : ''}`}>
         <Card
-          className={chart ? 'lg:col-span-3' : ''}
+          className={showChart ? 'lg:col-span-3' : ''}
           title={`${meta.label} props`}
-          aside={metric ? `backtest MAE ${metric.mae} vs L10 avg ${metric.baselineMae}` : undefined}
+          aside={
+            metric
+              ? isYesNo(stat)
+                ? `backtest Brier ${metric.brier} vs L10 rate ${metric.baselineBrier} (lower is better)`
+                : `backtest MAE ${metric.mae} vs L10 avg ${metric.baselineMae}`
+              : undefined
+          }
         >
           <div className="px-4 py-3 flex flex-wrap gap-2 border-b border-slate-700/60">
             <input
@@ -164,22 +173,22 @@ export default function PropsBoard({ slate, live, chart = true }) {
                           <span className="ml-1.5 text-[10px] uppercase font-semibold text-amber-400">⚠ {player.status}</span>
                         )}
                       </td>
-                      <td className="px-2 py-2 text-right tabular-nums text-slate-300">{prop.line}</td>
+                      <td className="px-2 py-2 text-right tabular-nums text-slate-300 whitespace-nowrap">{fmtLine(stat, prop)}</td>
                       <td className="px-2 py-2 text-right tabular-nums whitespace-nowrap">
-                        <span className="text-white font-semibold">{prop.proj}</span>
+                        <span className="text-white font-semibold">{fmtProj(stat, prop)}</span>
                         <span className="text-xs text-slate-500">
                           {' '}
-                          {prop.lo}–{prop.hi}
+                          {isYesNo(stat) ? '' : `${prop.lo}–${prop.hi}`}
                         </span>
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-slate-200">{pct(prop.pOver)}</td>
                       <td className="px-2 py-2 text-right tabular-nums text-slate-500">{pct(prop.pFair)}</td>
                       <td className="px-2 py-2 whitespace-nowrap">
-                        <LeanPill side={lean(prop)} />
+                        <LeanPill side={lean(prop)} yesNo={isYesNo(stat)} />
                         <span className="ml-1.5 text-xs tabular-nums text-slate-400">+{pct(edge(prop))}</span>
                       </td>
-                      <td className="px-2 py-2 text-right tabular-nums text-slate-400">{prop.l5}</td>
-                      <td className="px-2 py-2 text-right tabular-nums text-slate-400">{prop.l10}</td>
+                      <td className="px-2 py-2 text-right tabular-nums text-slate-400">{fmtRecent(stat, prop.l5)}</td>
+                      <td className="px-2 py-2 text-right tabular-nums text-slate-400">{fmtRecent(stat, prop.l10)}</td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">
                         <ResultCell player={player} stat={stat} prop={prop} live={live} />
                       </td>
@@ -191,7 +200,7 @@ export default function PropsBoard({ slate, live, chart = true }) {
           )}
         </Card>
 
-        {chart && (
+        {showChart && (
           <div className="lg:col-span-2">
             <ProjectionChart title={`Top ${meta.label} projections`} unit={meta.short.toLowerCase()} rows={chartRows} />
           </div>

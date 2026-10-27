@@ -8,6 +8,10 @@ const SUMMARY_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/
 // per-game summary fan-out, don't hammer ESPN on every request.
 const CACHE_MS = 15_000;
 
+// NFL games run ~3-4 hours; this comfortably covers overtime and ESPN's own
+// lag in flipping a game's status to "post" once it's actually over.
+const GAME_OVER_GRACE_MS = 8 * 60 * 60 * 1000;
+
 // Longer TTL than the 15s game-day cache: the current week and a given
 // week's event list rarely change mid-request-burst, and re-deriving the
 // current week means two extra ESPN calls every time.
@@ -78,9 +82,25 @@ async function fetchWeekDays(dates) {
   return { days, errors };
 }
 
+// True once a single game has finished -- by ESPN's own status, or (as a
+// safety net) by wall-clock time since kickoff.
+//
+// A game whose status never flips to "post" -- a data glitch on ESPN's
+// side, a rare postponement, anything -- would otherwise wedge the current
+// week forever, since allGamesFinal/getCurrentWeek would never see every
+// game as done. Once comfortably more than a game's length has passed
+// since kickoff, treat it as over regardless of what the status field
+// says: by then it has genuinely ended in the real world.
+function isGameOver(event) {
+  if (event.status?.type?.state === 'post') return true;
+  const kickoff = event.date ? new Date(event.date).getTime() : NaN;
+  if (Number.isNaN(kickoff)) return false;
+  return Date.now() - kickoff > GAME_OVER_GRACE_MS;
+}
+
 function allGamesFinal(days) {
   const events = days.flatMap((day) => day.events);
-  return events.length > 0 && events.every((e) => e.status?.type?.state === 'post');
+  return events.length > 0 && events.every(isGameOver);
 }
 
 // Every game across the NFL week containing `dateOverride` (defaults to
@@ -137,7 +157,7 @@ export async function getCurrentWeek() {
   }
   const weekData = await fetchJson(`${SCOREBOARD_URL}?seasontype=2&week=${week}&year=${year}`);
   const events = weekData.events || [];
-  const allFinal = events.length > 0 && events.every((e) => e.status?.type?.state === 'post');
+  const allFinal = events.length > 0 && events.every(isGameOver);
   const result = { year, week: allFinal ? week + 1 : week };
   currentWeekCache = { at: Date.now(), data: result };
   return result;

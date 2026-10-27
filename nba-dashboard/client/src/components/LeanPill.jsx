@@ -1,6 +1,6 @@
 // Over/under is a direction, not good/bad, so it's shown with an arrow and
 // a neutral pair of hues rather than the status colors used for hit/miss.
-export default function LeanPill({ side, prob }) {
+export default function LeanPill({ side, prob, yesNo = false }) {
   const over = side === 'over';
   return (
     <span
@@ -8,7 +8,7 @@ export default function LeanPill({ side, prob }) {
         over ? 'bg-sky-500/15 text-sky-300' : 'bg-amber-500/15 text-amber-300'
       }`}
     >
-      {over ? '▲ Over' : '▼ Under'}
+      {over ? (yesNo ? '▲ Yes' : '▲ Over') : yesNo ? '▼ No' : '▼ Under'}
       {prob != null && <span className="font-normal text-slate-300 tabular-nums">{Math.round(prob * 100)}%</span>}
     </span>
   );

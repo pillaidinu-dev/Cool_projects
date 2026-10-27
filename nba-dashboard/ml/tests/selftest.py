@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import daily  # noqa: E402
 from boxscore import parse_boxscore, parse_minutes  # noqa: E402
 from fake_espn import FakeESPN  # noqa: E402
-from features import STATS  # noqa: E402
+from features import MARKETS, STATS  # noqa: E402
 from model import p_over, prop_line  # noqa: E402
 
 
@@ -55,22 +55,35 @@ def test_pipeline():
         assert "BOS Sixth Man" not in names, "players ruled Out on the roster should be excluded"
         for p in players:
             assert isinstance(p["flags"], list) and p["lastPlayed"]
-            assert p["props"] and set(p["props"]) <= set(STATS), f"{p['name']}: {set(p['props'])}"
+            assert p["props"] and set(p["props"]) <= set(MARKETS), f"{p['name']}: {set(p['props'])}"
             for stat, prop in p["props"].items():
                 assert 0 <= prop["pOver"] <= 1 and 0 <= prop["pFair"] <= 1, f"{stat} probability out of range"
+                if stat == "dd":
+                    assert prop["proj"] == prop["pOver"] and 0 <= prop["l10"] <= 1, "dd is a yes/no market"
+                    continue
                 assert prop["lo"] <= prop["proj"] <= prop["hi"], f"{stat} range doesn't contain projection"
                 assert prop["line"] % 1 == 0.5, f"{stat} line {prop['line']} isn't a half-point"
         from projections import MIN_L10
 
         posted = [(s, prop) for p in players for s, prop in p["props"].items()]
-        assert all(prop["l10"] >= MIN_L10[s] for s, prop in posted), "posted a market below its L10 floor"
-        assert {s for s, _ in posted} == set(STATS), "every market should be posted for someone"
+        assert all(prop["l10"] >= MIN_L10[s] for s, prop in posted if s != "dd"), "posted a market below its L10 floor"
+        assert {s for s, _ in posted} == set(MARKETS), "every market should be posted for someone"
+        dd_posted = sorted((prop["pOver"], name) for name, prop in ((p["name"], p["props"]["dd"]) for p in players if "dd" in p["props"]))
+        assert any("Big Man" in name for _, name in dd_posted[-3:]), f"16-and-11 big men belong near the top, got {dd_posted[-3:]}"
+        assert not any("Deep Bench" in name or "Sixth Man" in name for _, name in dd_posted[-5:]), dd_posted[-5:]
         for stat, m in todays["metrics"].items():
+            if stat == "dd":
+                assert m and 0 <= m["brier"] <= 0.25 and m["brier"] <= m["baselineBrier"] + 0.02, f"dd backtest {m}"
+                continue
             assert m and m["mae"] >= 0 and m["baselineMae"] >= 0, f"{stat} has no backtest"
 
         graded = docs[-2]
         played = [p for p in graded["players"] if p["actual"]]
         assert played and all("result" in prop for p in played for prop in p["props"].values())
+        for p in played:
+            a = p["actual"]
+            assert a["dd"] == float(sum(a[c] >= 10 for c in ("pts", "reb", "ast", "stl", "blk")) >= 2)
+        assert history_has_dd(data), "double-double props should be graded into the tracker"
 
         history = json.loads((data / "history.json").read_text())
         assert history["overall"]["n"] > 0 and 0 <= history["overall"]["hitRate"] <= 1
@@ -91,6 +104,11 @@ def test_pipeline():
         print(f"[ok] pipeline: {len(box_files)} box-score days, {len(slates)} slates, "
               f"{history['overall']['n']} graded props, ROI {history['overall']['roi']}, "
               f"top-10 ROI {history['topPicks']['roi']}")
+
+
+def history_has_dd(data):
+    history = json.loads((data / "history.json").read_text())
+    return history["byStat"]["dd"]["n"] > 0
 
 
 def test_parse_boxscore():
@@ -244,6 +262,52 @@ def test_history_flags():
     print("[ok] projections: flags missed-games and new-team players only")
 
 
+def test_espn_retries_transient_failures():
+    """Regression test for 2026-10-27: ESPN answered the scoreboard with an
+    empty 200 and the whole daily run crashed. Transient failures (5xx, a
+    dropped connection, a non-JSON body) are retried; a 4xx is not."""
+    import requests
+
+    import espn_client
+
+    class Res:
+        def __init__(self, status, body):
+            self.status_code, self.body = status, body
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                err = requests.HTTPError(f"{self.status_code}")
+                err.response = self
+                raise err
+
+        def json(self):
+            if self.body is None:
+                raise requests.exceptions.JSONDecodeError("Expecting value", "", 0)
+            return self.body
+
+    def run(responses):
+        calls = []
+
+        def fake_get(url, params=None, timeout=None):
+            calls.append(url)
+            return responses[len(calls) - 1]
+
+        original, sleep = espn_client.requests.get, espn_client.time.sleep
+        espn_client.requests.get, espn_client.time.sleep = fake_get, lambda _s: None
+        try:
+            return espn_client._get("scoreboard"), len(calls)
+        finally:
+            espn_client.requests.get, espn_client.time.sleep = original, sleep
+
+    assert run([Res(200, None), Res(503, {}), Res(200, {"events": []})]) == ({"events": []}, 3)
+    try:
+        run([Res(404, {})])
+        raise AssertionError("a 404 must raise, not retry")
+    except requests.HTTPError:
+        pass
+    print("[ok] espn_client: empty bodies and 5xx retried, 4xx raised")
+
+
 def test_lines_and_odds():
     assert prop_line(24.3) == 24.5 and prop_line(24.9) == 24.5 and prop_line(0.2) == 0.5
     assert p_over("pts", 30, 6, 24.5) > 0.5 > p_over("pts", 20, 6, 24.5)
@@ -258,5 +322,6 @@ if __name__ == "__main__":
     test_fetch_day_skips_preseason_and_missing_summaries()
     test_bootstrap_backfills_an_older_store()
     test_history_flags()
+    test_espn_retries_transient_failures()
     test_pipeline()
     print("\nselftest passed")

@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-from features import STATS
+from features import MARKETS, STATS
 
 CONFIDENCE_BUCKETS = [(0.0, 0.40), (0.40, 0.50), (0.50, 0.60), (0.60, 0.70), (0.70, 1.01)]
 PRICE_CLAMP = (0.05, 0.95)
@@ -61,6 +61,7 @@ def grade_doc(doc, day_logs):
             player["actual"] = None
             continue
         player["actual"] = {stat: float(sum(row[c] for c in cols)) for stat, cols in STATS.items()}
+        player["actual"]["dd"] = float(sum(player["actual"][c] >= 10 for c in ("pts", "reb", "ast", "stl", "blk")) >= 2)
         player["actual"]["min"] = float(row["min"])
         for stat, prop in player["props"].items():
             went_over = player["actual"][stat] > prop["line"]
@@ -112,7 +113,7 @@ def _finish(t):
 
 
 def build_history(data_dir, is_sample=False):
-    by_stat = {stat: _tally() for stat in STATS}
+    by_stat = {stat: _tally() for stat in MARKETS}
     buckets = [(lo, hi, _tally()) for lo, hi in CONFIDENCE_BUCKETS]
     top, overall = _tally(), _tally()
     days = []

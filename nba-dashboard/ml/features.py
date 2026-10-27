@@ -20,6 +20,11 @@ STATS = {
     "pra": ["pts", "reb", "ast"],
     "stocks": ["stl", "blk"],
 }
+# A double-double is 10+ in at least two of these.
+DD_CATS = ["pts", "reb", "ast", "stl", "blk"]
+# Every prop market: the summed stats above plus the double-double, a yes/no
+# market (the `dd` column is 1 or 0, so its line is 0.5).
+MARKETS = list(STATS) + ["dd"]
 # Low-count markets whose over/under odds come from a Poisson tail rather
 # than a normal approximation.
 COUNT_STATS = {"fg3m", "stl", "blk", "stocks"}
@@ -32,6 +37,7 @@ def add_derived(df):
     df = df.copy()
     for stat, parts in STATS.items():
         df[stat] = df[parts].sum(axis=1)
+    df["dd"] = (df[DD_CATS].ge(10).sum(axis=1) >= 2).astype(float)
     return df
 
 

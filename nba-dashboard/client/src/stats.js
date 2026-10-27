@@ -8,6 +8,7 @@ export const STATS = [
   { key: 'blk', label: 'Blocks', short: 'BLK' },
   { key: 'pra', label: 'Pts + Reb + Ast', short: 'PRA' },
   { key: 'stocks', label: 'Steals + Blocks', short: 'STL+BLK' },
+  { key: 'dd', label: 'Double-double', short: 'DD' },
 ];
 
 export const STAT_BY_KEY = Object.fromEntries(STATS.map((s) => [s.key, s]));
@@ -25,6 +26,28 @@ export function sideProb(prop) {
 
 export function edge(prop) {
   return lean(prop) === 'over' ? prop.pOver - prop.pFair : prop.pFair - prop.pOver;
+}
+
+// The double-double is a yes/no market: its line is 0.5 on a 1/0 outcome,
+// its projection is a probability, and its recent form is a rate.
+export function isYesNo(stat) {
+  return stat === 'dd';
+}
+
+export function fmtProj(stat, prop) {
+  return isYesNo(stat) ? pct(prop.proj) : prop.proj;
+}
+
+export function fmtLine(stat, prop) {
+  return isYesNo(stat) ? 'Yes / No' : prop.line;
+}
+
+export function fmtRecent(stat, value) {
+  return isYesNo(stat) ? pct(value) : value;
+}
+
+export function fmtActual(stat, value) {
+  return isYesNo(stat) ? (value ? 'Yes' : 'No') : value;
 }
 
 export function signed(value, digits = 2) {

@@ -1,6 +1,6 @@
 import Card from './Card.jsx';
 import LeanPill, { ResultBadge } from './LeanPill.jsx';
-import { STAT_BY_KEY, edge, lean, pct, sideProb } from '../stats.js';
+import { STAT_BY_KEY, edge, fmtActual, fmtProj, fmtRecent, isYesNo, lean, pct, sideProb } from '../stats.js';
 
 // The slate's biggest disagreements with the L10-average price, across
 // every market — the same daily top-10 the tracker scores.
@@ -30,12 +30,12 @@ export default function BestPicks({ slate, limit = 10 }) {
                   </span>
                 </p>
                 <p className="text-xs text-slate-400 tabular-nums">
-                  {STAT_BY_KEY[stat].label} {prop.line} · proj {prop.proj} · L10 {prop.l10}
-                  {player.actual && <> · actual {player.actual[stat]}</>}
+                  {STAT_BY_KEY[stat].label} {isYesNo(stat) ? '' : prop.line} · proj {fmtProj(stat, prop)} · L10 {fmtRecent(stat, prop.l10)}
+                  {player.actual && <> · actual {fmtActual(stat, player.actual[stat])}</>}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1">
-                <LeanPill side={lean(prop)} prob={sideProb(prop)} />
+                <LeanPill side={lean(prop)} prob={sideProb(prop)} yesNo={isYesNo(stat)} />
                 <span className="text-xs tabular-nums text-slate-500">
                   edge +{pct(edge(prop))}
                   {player.actual && <> · <ResultBadge result={prop.result} /></>}

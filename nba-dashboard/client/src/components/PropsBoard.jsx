@@ -2,13 +2,18 @@ import { useMemo, useState } from 'react';
 import Card from './Card.jsx';
 import LeanPill, { ResultBadge } from './LeanPill.jsx';
 import ProjectionChart from './ProjectionChart.jsx';
+import SortHeader from './SortHeader.jsx';
+import { compareBy, nextSort } from '../sorting.js';
 import { STATS, STAT_BY_KEY, edge, fmtActual, fmtLine, fmtProj, fmtRecent, isYesNo, lean, pct } from '../stats.js';
 
-const SORTS = [
-  { key: 'edge', label: 'Edge' },
-  { key: 'proj', label: 'Projection' },
-  { key: 'gap', label: 'Proj − line' },
-];
+
+// The stat a player has right now, for sorting the Live/Actual column: his
+// graded result, or his live box-score line once his game has started.
+function currentValue(player, stat, live) {
+  if (player.actual) return player.actual[stat];
+  const now = live?.[player.id];
+  return now ? (now[stat] ?? 0) : null;
+}
 
 function ResultCell({ player, stat, prop, live }) {
   if (player.actual === null) return <span className="text-xs text-slate-500">DNP</span>;
@@ -37,7 +42,7 @@ export default function PropsBoard({ slate, live, chart = true }) {
   const [stat, setStat] = useState('pts');
   const [team, setTeam] = useState('');
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState('edge');
+  const [sort, setSort] = useState({ key: 'edge', dir: 'desc' });
 
   const teams = useMemo(() => [...new Set(slate.players.map((p) => p.team))].sort(), [slate]);
 
@@ -48,13 +53,19 @@ export default function PropsBoard({ slate, live, chart = true }) {
       .filter((p) => !team || p.team === team)
       .filter((p) => !q || p.name.toLowerCase().includes(q))
       .map((p) => ({ player: p, prop: p.props[stat] }));
-    const score = {
-      edge: (r) => edge(r.prop),
+    const value = {
+      name: (r) => r.player.name,
+      line: (r) => r.prop.line,
       proj: (r) => r.prop.proj,
-      gap: (r) => Math.abs(r.prop.proj - r.prop.line),
-    }[sort];
-    return list.sort((a, b) => score(b) - score(a));
-  }, [slate, stat, team, query, sort]);
+      over: (r) => r.prop.pOver,
+      fair: (r) => r.prop.pFair,
+      edge: (r) => edge(r.prop),
+      l5: (r) => r.prop.l5,
+      l10: (r) => r.prop.l10,
+      result: (r) => currentValue(r.player, stat, live),
+    }[sort.key];
+    return list.sort(compareBy(value, sort.dir));
+  }, [slate, stat, team, query, sort, live]);
 
   const chartRows = useMemo(
     () =>
@@ -122,17 +133,7 @@ export default function PropsBoard({ slate, live, chart = true }) {
                 </option>
               ))}
             </select>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="rounded-md bg-slate-900/70 border border-slate-700 px-2 py-1.5 text-sm text-slate-200"
-            >
-              {SORTS.map((s) => (
-                <option key={s.key} value={s.key}>
-                  Sort: {s.label}
-                </option>
-              ))}
-            </select>
+            <span className="self-center text-xs text-slate-500">Click a column to sort</span>
           </div>
           {rows.length === 0 ? (
             <p className="px-4 py-6 text-sm text-slate-500">No players match.</p>
@@ -141,15 +142,28 @@ export default function PropsBoard({ slate, live, chart = true }) {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-slate-800">
                   <tr className="text-slate-500 text-xs uppercase">
-                    <th className="text-left font-medium px-4 py-2">Player</th>
-                    <th className="text-right font-medium px-2 py-2">Line</th>
-                    <th className="text-right font-medium px-2 py-2">Proj</th>
-                    <th className="text-right font-medium px-2 py-2" title="Model's probability of the over">Over</th>
-                    <th className="text-right font-medium px-2 py-2" title="Over probability implied by the L10 average">Fair</th>
-                    <th className="text-left font-medium px-2 py-2">Lean · edge</th>
-                    <th className="text-right font-medium px-2 py-2">L5</th>
-                    <th className="text-right font-medium px-2 py-2">L10</th>
-                    <th className="text-right font-medium px-4 py-2">{slate.graded ? 'Actual' : 'Live'}</th>
+                    {[
+                      ['name', 'Player', 'left', 'px-4'],
+                      ['line', 'Line'],
+                      ['proj', 'Proj'],
+                      ['over', 'Over', 'right', '', "Model's probability of the over"],
+                      ['fair', 'Fair', 'right', '', 'Over probability implied by the L10 average'],
+                      ['edge', 'Lean · edge', 'left'],
+                      ['l5', 'L5'],
+                      ['l10', 'L10'],
+                      ['result', slate.graded ? 'Actual' : 'Live', 'right', 'px-4'],
+                    ].map(([key, label, align = 'right', className = '', title]) => (
+                      <SortHeader
+                        key={key}
+                        label={label}
+                        title={title}
+                        align={align}
+                        className={className}
+                        active={sort.key === key}
+                        dir={sort.dir}
+                        onSort={() => setSort((s) => nextSort(s, key))}
+                      />
+                    ))}
                   </tr>
                 </thead>
                 <tbody>

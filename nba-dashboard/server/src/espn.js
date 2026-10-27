@@ -11,12 +11,27 @@ const CACHE_MS = 15_000;
 const scoreboardCache = new Map(); // ymd -> { at, data }
 const summaryCache = new Map(); // eventId -> { at, data }
 
+const ATTEMPTS = 3;
+
+// Retries ESPN's transient failures — a 5xx, a dropped connection, or (seen
+// in production on 2026-10-27) a 200 with an empty body. A 4xx is a real
+// answer and is thrown straight away.
 async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`ESPN request failed (${res.status}): ${url}`);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const res = await fetch(url);
+      if (res.status >= 400 && res.status < 500) {
+        const err = new Error(`ESPN request failed (${res.status}): ${url}`);
+        err.final = true;
+        throw err;
+      }
+      if (!res.ok) throw new Error(`ESPN request failed (${res.status}): ${url}`);
+      return await res.json();
+    } catch (err) {
+      if (err.final || attempt === ATTEMPTS) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
   }
-  return res.json();
 }
 
 // Today's date in US Eastern time as YYYYMMDD — NBA slates (and ESPN's

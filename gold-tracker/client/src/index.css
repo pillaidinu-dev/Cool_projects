@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* Color tokens — light by default, stepped separately for dark. */
+:root {
+  color-scheme: light;
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --border: #e7e4dc;
+  --ink: #1c1a16;
+  --ink-2: #5c574c;
+  --muted: #8a8476;
+  --accent: #a36f00;
+  --accent-ink: #ffffff;
+  --series: #eda100;
+  --series-soft: rgb(237 161 0 / 0.14);
+  --good: #0f7b3d;
+  --bad: #c23b30;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #141311;
+    --surface: #1d1b18;
+    --border: #33302a;
+    --ink: #f0eee8;
+    --ink-2: #c3bfb3;
+    --muted: #8f8a7d;
+    --accent: #e0a92a;
+    --accent-ink: #1c1a16;
+    --series: #c98500;
+    --series-soft: rgb(201 133 0 / 0.18);
+    --good: #3fb871;
+    --bad: #ef6b5f;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141311;
+  --surface: #1d1b18;
+  --border: #33302a;
+  --ink: #f0eee8;
+  --ink-2: #c3bfb3;
+  --muted: #8f8a7d;
+  --accent: #e0a92a;
+  --accent-ink: #1c1a16;
+  --series: #c98500;
+  --series-soft: rgb(201 133 0 / 0.18);
+  --good: #3fb871;
+  --bad: #ef6b5f;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-line: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-series: var(--series);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+input,
+select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  color: var(--ink);
+  width: 100%;
+  font-size: 1rem;
+}
+input:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}

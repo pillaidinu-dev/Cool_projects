@@ -78,3 +78,15 @@ services:
     envVars:
       - key: NBA_DATA_URL
         value: https://raw.githubusercontent.com/pillaidinu-dev/Cool_projects/main/nba-dashboard/data
+
+  - type: web
+    name: gold-tracker
+    env: docker
+    branch: main
+    dockerfilePath: ./gold-tracker/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - gold-tracker/**

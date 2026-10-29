@@ -1,0 +1,10 @@
+{
+  "name": "Gold Tracker",
+  "short_name": "Gold",
+  "description": "Track the gold you've saved, in grams, valued at today's price.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141311",
+  "theme_color": "#141311",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

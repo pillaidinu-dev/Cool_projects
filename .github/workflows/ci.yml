@@ -199,3 +199,55 @@ jobs:
 
           echo "Server did not become healthy in time" >&2
           exit 1
+
+  gold-tracker-client:
+    name: Gold Tracker client (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gold-tracker/client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: gold-tracker/client/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  gold-tracker-server:
+    name: Gold Tracker server (smoke test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gold-tracker/server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: gold-tracker/server/package-lock.json
+
+      - run: npm ci
+
+      - name: Start server and hit health check
+        run: |
+          node --no-warnings src/index.js &
+          server_pid=$!
+          trap "kill $server_pid" EXIT
+
+          for _ in $(seq 1 10); do
+            if curl -sf http://localhost:4400/api/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Server did not become healthy in time" >&2
+          exit 1

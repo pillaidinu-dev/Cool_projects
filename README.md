@@ -13,6 +13,8 @@ with its own client/server, README, and Dockerfile.
 - **[NBA Props Live](nba-dashboard/README.md)** (`nba-dashboard/`) — live NBA scores and leaders,
   daily player-prop projections (points, rebounds, assists, threes, steals, blocks), and a
   season-long tracker that saves and grades every projection.
+- **[Gold Tracker](gold-tracker/README.md)** (`gold-tracker/`) — track the gold you've saved, in
+  grams, valued at today's live price per gram, with a savings goal and per-purchase gains.
 
 ---
 

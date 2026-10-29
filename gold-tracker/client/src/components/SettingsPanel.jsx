@@ -26,7 +26,7 @@ export default function SettingsPanel({ settings, livePrice, purchases, onChange
       const list = Array.isArray(data) ? data : data.purchases;
       const ok =
         Array.isArray(list) &&
-        list.every((p) => p.id && p.date && p.grams > 0 && [24, 22, 18, 14].includes(p.karat) && p.paid >= 0);
+        list.every((p) => p.id && p.date && p.grams > 0 && (p.type === 'paxg' ? p.paxg > 0 : [24, 22].includes(p.karat)) && p.paid >= 0);
       if (!ok) throw new Error('not a Gold Tracker backup');
       if (!confirm(`Replace your ${purchases.length} purchases with ${list.length} from the backup?`)) return;
       onImport(list);

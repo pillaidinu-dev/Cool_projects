@@ -6,9 +6,10 @@ and it shows how many grams you hold and what they're worth at today's price.
 ## Features
 
 - **Total grams saved**, also shown in sovereigns (1 sovereign = 8 g), plus pure-gold grams (22K
-  counts as 91.6% pure, 18K as 75%).
-- **Today's price per gram** for 24K, 22K and 18K, along with the 10 g rate and today's change.
-  It also shows the price of 1 sovereign (8 g) in 22K and 24K. It refreshes every 10 minutes.
+  counts as 91.6% pure). When you hold PAXG, it also shows how your grams split between physical
+  gold and PAXG.
+- **Today's price per gram** for 24K and 22K, along with the 10 g rate and today's change. It also
+  shows the price of 1 sovereign (8 g) in 22K and 24K, and of 1 PAXG (one troy ounce). It refreshes every 10 minutes.
 - **Value vs. cost**: what your gold is worth today, the total you've invested, gain or loss in
   money and %, and your average cost per gram.
 - **Savings goal**: set a target in grams and see a progress bar and how much is left.
@@ -18,8 +19,11 @@ and it shows how many grams you hold and what they're worth at today's price.
 - **Local price options**: the live spot price is the international rate. You can add a
   *local premium %* (in India, import duty plus 3% GST put retail about 9% above spot). You can
   also enter a *manual 24K rate*, such as your jeweller's or bank's rate today.
-- **Sovereigns**: you can enter a purchase's weight in grams or sovereigns. It is always saved in
-  grams.
+- **Physical gold or PAXG**: each purchase is either physical gold (24K or 22K, with weight in grams
+  or sovereigns) or PAXG. For a PAXG buy, such as a dollar-cost-averaging buy, you enter the dollars
+  you spent and the price per PAXG (or the PAXG amount you received). One PAXG is backed by one fine
+  troy ounce, so the buy is saved as that many grams (1 PAXG = 31.1 g). It is valued at the plain
+  spot price, without the local premium.
 - **Currencies**: USD (the default), INR, AED, GBP, EUR, SGD, CAD and AUD.
 - **Backup**: export or import your data as JSON.
 

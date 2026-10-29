@@ -27,6 +27,11 @@ export default function Summary({ totals, settings }) {
           </span>
         )}
       </div>
+      {totals.paxgGrams > 0 && (
+        <div className="mt-1 text-sm text-ink-2">
+          Physical {formatGrams(totals.physicalGrams)} · PAXG {formatGrams(totals.paxgGrams)}
+        </div>
+      )}
 
       {goalGrams > 0 && (
         <div className="mt-4">

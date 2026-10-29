@@ -1,6 +1,6 @@
-import { SOVEREIGN_GRAMS, formatMoney, karatPrice } from '../lib/gold.js';
+import { GRAMS_PER_OZ, SOVEREIGN_GRAMS, formatMoney, karatPrice } from '../lib/gold.js';
 
-export default function PriceCard({ price, price24k, settings }) {
+export default function PriceCard({ price, price24k, spotPerGram, settings }) {
   const { currency, manualPrice24k, premiumPct } = settings;
   const { data, error, loading, refresh } = price;
   const manual = manualPrice24k != null;
@@ -37,7 +37,7 @@ export default function PriceCard({ price, price24k, settings }) {
       </div>
 
       <dl className="mt-4 divide-y divide-line text-sm">
-        {[22, 18].map((k) => (
+        {[22].map((k) => (
           <div key={k} className="flex justify-between py-2">
             <dt className="text-ink-2">{k}K</dt>
             <dd className="tnum font-medium">
@@ -57,6 +57,12 @@ export default function PriceCard({ price, price24k, settings }) {
             </dd>
           </div>
         ))}
+        <div className="flex justify-between py-2">
+          <dt className="text-ink-2">1 PAXG (1 troy oz)</dt>
+          <dd className="tnum font-medium">
+            {spotPerGram == null && price24k == null ? '—' : formatMoney((spotPerGram ?? price24k) * GRAMS_PER_OZ, currency)}
+          </dd>
+        </div>
       </dl>
 
       <p className="mt-2 text-xs text-muted">

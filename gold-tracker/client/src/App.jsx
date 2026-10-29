@@ -33,7 +33,7 @@ export default function App() {
     () => [...purchases].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt),
     [purchases],
   );
-  const totals = useMemo(() => summarize(purchases, price24k), [purchases, price24k]);
+  const totals = useMemo(() => summarize(purchases, price24k, livePrice), [purchases, price24k, livePrice]);
 
   function upsert(purchase) {
     setPurchases((list) =>
@@ -112,6 +112,7 @@ export default function App() {
           initial={editing === 'new' ? null : editing}
           currency={settings.currency}
           price24k={price24k}
+          spotPerGram={livePrice}
           onSave={upsert}
           onCancel={() => setEditing(null)}
         />
@@ -119,7 +120,7 @@ export default function App() {
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <Summary totals={totals} settings={settings} />
-        <PriceCard price={price} price24k={price24k} settings={settings} />
+        <PriceCard price={price} price24k={price24k} spotPerGram={livePrice} settings={settings} />
       </div>
 
       <section className="mt-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
@@ -132,6 +133,7 @@ export default function App() {
         purchases={sorted}
         currency={settings.currency}
         price24k={price24k}
+        spotPerGram={livePrice}
         onEdit={setEditing}
         onDelete={remove}
         onAdd={() => setEditing('new')}

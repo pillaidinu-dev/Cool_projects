@@ -1,31 +1,55 @@
-export const KARATS = [24, 22, 18, 14];
+export const KARATS = [24, 22];
 export const CURRENCIES = ['USD', 'INR', 'AED', 'GBP', 'EUR', 'SGD', 'CAD', 'AUD'];
 
 // Fraction of pure gold in each karat (22K is sold as "916", i.e. 91.6%).
-export const PURITY = { 24: 0.999, 22: 0.916, 18: 0.75, 14: 0.585 };
+export const PURITY = { 24: 0.999, 22: 0.916 };
 
 // Price of a karat is quoted relative to 24K (which is itself ~99.9% pure).
 export const karatPrice = (price24k, karat) => price24k * (PURITY[karat] / PURITY[24]);
 
-export function summarize(purchases, price24k) {
+// PAX Gold: each PAXG token is backed by one fine troy ounce of gold, so a
+// PAXG purchase is tracked as its token amount × 31.1 g of pure gold.
+export const GRAMS_PER_OZ = 31.1034768;
+export const isPaxg = (p) => p.type === 'paxg';
+
+// What a purchase is worth today. Physical gold uses the 24K rate (with any
+// local premium or manual rate); PAXG uses the plain spot price per gram,
+// falling back to the 24K rate when there is no live price.
+export function purchaseValue(p, price24k, spotPerGram) {
+  if (isPaxg(p)) {
+    const rate = spotPerGram ?? price24k;
+    return rate == null ? null : p.grams * rate;
+  }
+  return price24k == null ? null : p.grams * karatPrice(price24k, p.karat);
+}
+
+export function summarize(purchases, price24k, spotPerGram) {
   let grams = 0;
   let pureGrams = 0;
+  let paxgGrams = 0;
   let invested = 0;
   let value = 0;
+  let priced = true;
   for (const p of purchases) {
     grams += p.grams;
-    pureGrams += p.grams * PURITY[p.karat];
+    pureGrams += isPaxg(p) ? p.grams : p.grams * PURITY[p.karat];
+    if (isPaxg(p)) paxgGrams += p.grams;
     invested += p.paid;
-    if (price24k != null) value += p.grams * karatPrice(price24k, p.karat);
+    const v = purchaseValue(p, price24k, spotPerGram);
+    if (v == null) priced = false;
+    else value += v;
   }
-  const gain = value - invested;
+  if (!priced) value = null;
+  const gain = value == null ? null : value - invested;
   return {
     grams,
     pureGrams,
+    paxgGrams,
+    physicalGrams: grams - paxgGrams,
     invested,
-    value: price24k != null ? value : null,
-    gain: price24k != null ? gain : null,
-    gainPct: price24k != null && invested > 0 ? (gain / invested) * 100 : null,
+    value,
+    gain,
+    gainPct: gain != null && invested > 0 ? (gain / invested) * 100 : null,
     avgPerGram: grams > 0 ? invested / grams : null,
   };
 }

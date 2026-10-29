@@ -13,7 +13,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 // Holdings live in the browser; the server only proxies (and caches) prices so
 // the client doesn't depend on third-party CORS or rate limits.
 app.get('/api/price', async (req, res) => {
-  const currency = String(req.query.currency || 'INR').toUpperCase();
+  const currency = String(req.query.currency || 'USD').toUpperCase();
   if (!SUPPORTED_CURRENCIES.includes(currency)) {
     return res.status(400).json({ error: `Unsupported currency ${currency}` });
   }

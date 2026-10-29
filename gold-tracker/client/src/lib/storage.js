@@ -2,7 +2,7 @@ const PURCHASES_KEY = 'gold-tracker-purchases-v1';
 const SETTINGS_KEY = 'gold-tracker-settings-v1';
 
 export const DEFAULT_SETTINGS = {
-  currency: 'INR',
+  currency: 'USD',
   // Goal, in grams of gold (total weight).
   goalGrams: 100,
   // Spot price is the international rate; local retail usually sits above it

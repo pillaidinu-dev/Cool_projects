@@ -5,9 +5,10 @@ and it shows how many grams you hold and what they're worth at today's price.
 
 ## Features
 
-- **Total grams saved**, plus pure-gold grams (22K counts as 91.6% pure, 18K as 75%).
+- **Total grams saved**, also shown in sovereigns (1 sovereign = 8 g), plus pure-gold grams (22K
+  counts as 91.6% pure, 18K as 75%).
 - **Today's price per gram** for 24K, 22K and 18K, along with the 10 g rate and today's change.
-  It refreshes every 10 minutes.
+  It also shows the price of 1 sovereign (8 g) in 22K and 24K. It refreshes every 10 minutes.
 - **Value vs. cost**: what your gold is worth today, the total you've invested, gain or loss in
   money and %, and your average cost per gram.
 - **Savings goal**: set a target in grams and see a progress bar and how much is left.
@@ -17,7 +18,9 @@ and it shows how many grams you hold and what they're worth at today's price.
 - **Local price options**: the live spot price is the international rate. You can add a
   *local premium %* (in India, import duty plus 3% GST put retail about 9% above spot). You can
   also enter a *manual 24K rate*, such as your jeweller's or bank's rate today.
-- **Currencies**: INR, USD, AED, GBP, EUR, SGD, CAD and AUD.
+- **Sovereigns**: you can enter a purchase's weight in grams or sovereigns. It is always saved in
+  grams.
+- **Currencies**: USD (the default), INR, AED, GBP, EUR, SGD, CAD and AUD.
 - **Backup**: export or import your data as JSON.
 
 ## Stack
@@ -25,7 +28,7 @@ and it shows how many grams you hold and what they're worth at today's price.
 - **Frontend** (`client/`): React, Vite and Tailwind CSS v4. Your purchases and settings are
   stored in the browser (`localStorage`). There is no account and no database.
 - **Backend** (`server/`): a small Express server. It hosts the built client and serves
-  `GET /api/price?currency=INR`, which returns the 24K price per gram. Prices come from
+  `GET /api/price?currency=USD`, which returns the 24K price per gram. Prices come from
   goldprice.org. If that fails, it uses gold-api.com with an exchange rate from open.er-api.com
   or frankfurter.app. Prices are cached for 10 minutes. If every source is down, it serves the
   last good price and marks it stale.

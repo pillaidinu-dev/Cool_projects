@@ -1,5 +1,5 @@
 export const KARATS = [24, 22, 18, 14];
-export const CURRENCIES = ['INR', 'USD', 'AED', 'GBP', 'EUR', 'SGD', 'CAD', 'AUD'];
+export const CURRENCIES = ['USD', 'INR', 'AED', 'GBP', 'EUR', 'SGD', 'CAD', 'AUD'];
 
 // Fraction of pure gold in each karat (22K is sold as "916", i.e. 91.6%).
 export const PURITY = { 24: 0.999, 22: 0.916, 18: 0.75, 14: 0.585 };
@@ -40,6 +40,14 @@ export function formatMoney(amount, currency, { compact = false } = {}) {
     maximumFractionDigits: compact || Math.abs(amount) >= 1000 ? 0 : 2,
     ...(compact ? { notation: 'compact' } : {}),
   }).format(amount);
+}
+
+// A sovereign (also called a pavan) is 8 g of gold, usually 22K.
+export const SOVEREIGN_GRAMS = 8;
+
+export function formatSovereigns(grams) {
+  const n = grams / SOVEREIGN_GRAMS;
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n)} sovereign${n === 1 ? '' : 's'}`;
 }
 
 export function formatGrams(grams) {

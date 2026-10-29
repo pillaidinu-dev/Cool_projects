@@ -1,4 +1,4 @@
-import { formatGrams, formatMoney } from '../lib/gold.js';
+import { formatGrams, formatMoney, formatSovereigns } from '../lib/gold.js';
 
 function Tile({ label, value, sub, tone }) {
   const toneClass = tone === 'good' ? 'text-good' : tone === 'bad' ? 'text-bad' : 'text-ink-2';
@@ -22,14 +22,16 @@ export default function Summary({ totals, settings }) {
       <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
         <span className="text-5xl font-semibold tracking-tight">{formatGrams(totals.grams)}</span>
         {totals.grams > 0 && (
-          <span className="text-sm text-ink-2">{formatGrams(totals.pureGrams)} pure gold</span>
+          <span className="text-sm text-ink-2">
+            {formatSovereigns(totals.grams)} · {formatGrams(totals.pureGrams)} pure gold
+          </span>
         )}
       </div>
 
       {goalGrams > 0 && (
         <div className="mt-4">
           <div className="mb-1 flex justify-between text-xs text-ink-2">
-            <span>Goal: {formatGrams(goalGrams)}</span>
+            <span>Goal: {formatGrams(goalGrams)} ({formatSovereigns(goalGrams)})</span>
             <span>
               {pct.toFixed(1)}%
               {totals.grams < goalGrams && ` · ${formatGrams(goalGrams - totals.grams)} to go`}

@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { KARATS, formatMoney, karatPrice, todayISO } from '../lib/gold.js';
+import { KARATS, SOVEREIGN_GRAMS, formatGrams, formatMoney, karatPrice, todayISO } from '../lib/gold.js';
 
 export default function PurchaseForm({ initial, currency, price24k, onSave, onCancel }) {
   const [date, setDate] = useState(initial?.date ?? todayISO());
-  const [grams, setGrams] = useState(initial ? String(initial.grams) : '');
+  const [weight, setWeight] = useState(initial ? String(initial.grams) : '');
+  const [unit, setUnit] = useState('g'); // 'g' or 'sov' — always saved as grams
   const [karat, setKarat] = useState(initial?.karat ?? 24);
   const [paid, setPaid] = useState(initial ? String(initial.paid) : '');
   const [note, setNote] = useState(initial?.note ?? '');
 
-  const g = Number(grams);
+  const g = Number(weight) * (unit === 'sov' ? SOVEREIGN_GRAMS : 1);
   const amount = Number(paid);
   const valid = g > 0 && amount >= 0 && paid !== '' && date;
   const perGram = g > 0 && amount > 0 ? amount / g : null;
@@ -34,24 +35,43 @@ export default function PurchaseForm({ initial, currency, price24k, onSave, onCa
       className="mb-4 rounded-2xl border border-accent bg-surface p-4 sm:p-5"
     >
       <h2 className="mb-3 text-base font-semibold">{initial ? 'Edit purchase' : 'Add gold'}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.3fr_0.8fr_1fr_1fr]">
         <label className="text-sm">
           <span className="mb-1 block text-ink-2">Date</span>
           <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} required />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-ink-2">Weight (grams)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.001"
-            min="0"
-            placeholder="e.g. 10"
-            value={grams}
-            onChange={(e) => setGrams(e.target.value)}
-            required
-            autoFocus
-          />
+          <span className="mb-1 block text-ink-2">Weight</span>
+          <div className="flex gap-1.5">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.001"
+              min="0"
+              placeholder={unit === 'sov' ? 'e.g. 1' : 'e.g. 10'}
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              required
+              autoFocus
+            />
+            <select
+              aria-label="Weight unit"
+              className="!w-auto"
+              value={unit}
+              onChange={(e) => {
+                // Keep the same amount of gold when switching units.
+                const next = e.target.value;
+                if (weight !== '' && next !== unit) {
+                  const n = next === 'sov' ? g / SOVEREIGN_GRAMS : g;
+                  setWeight(String(Number(n.toFixed(4))));
+                }
+                setUnit(next);
+              }}
+            >
+              <option value="g">g</option>
+              <option value="sov">sov</option>
+            </select>
+          </div>
         </label>
         <label className="text-sm">
           <span className="mb-1 block text-ink-2">Purity</span>
@@ -89,6 +109,7 @@ export default function PurchaseForm({ initial, currency, price24k, onSave, onCa
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted">
+          {unit === 'sov' && g > 0 && <>= {formatGrams(g)}. </>}
           {perGram != null && <>You paid {formatMoney(perGram, currency)}/g. </>}
           {todayRate != null && <>Today's {karat}K rate is {formatMoney(todayRate, currency)}/g.</>}
           {todayRate != null && g > 0 && paid === '' && (

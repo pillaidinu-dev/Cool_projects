@@ -1,4 +1,4 @@
-import { formatMoney, karatPrice } from '../lib/gold.js';
+import { SOVEREIGN_GRAMS, formatMoney, karatPrice } from '../lib/gold.js';
 
 export default function PriceCard({ price, price24k, settings }) {
   const { currency, manualPrice24k, premiumPct } = settings;
@@ -49,6 +49,14 @@ export default function PriceCard({ price, price24k, settings }) {
           <dt className="text-ink-2">10 g · 24K</dt>
           <dd className="tnum font-medium">{price24k == null ? '—' : formatMoney(price24k * 10, currency)}</dd>
         </div>
+        {[22, 24].map((k) => (
+          <div key={`sov-${k}`} className="flex justify-between py-2">
+            <dt className="text-ink-2">1 sovereign (8 g) · {k}K</dt>
+            <dd className="tnum font-medium">
+              {price24k == null ? '—' : formatMoney(karatPrice(price24k, k) * SOVEREIGN_GRAMS, currency)}
+            </dd>
+          </div>
+        ))}
       </dl>
 
       <p className="mt-2 text-xs text-muted">

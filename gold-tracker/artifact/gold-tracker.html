@@ -1,0 +1,720 @@
+<title>Gold Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: summary + price side by side, chart, then the purchase ledger — one column on phones. */
+:root {
+  --bg: #fbfaf7; --surface: #ffffff; --line: #e7e4dc;
+  --ink: #1c1a16; --ink-2: #5c574c; --muted: #8a8476;
+  --accent: #a36f00; --accent-ink: #ffffff;
+  --series: #eda100; --series-soft: rgb(237 161 0 / 0.14);
+  --good: #0f7b3d; --bad: #c23b30;
+  --font: 'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141311; --surface: #1d1b18; --line: #33302a;
+    --ink: #f0eee8; --ink-2: #c3bfb3; --muted: #8f8a7d;
+    --accent: #e0a92a; --accent-ink: #1c1a16;
+    --series: #c98500; --series-soft: rgb(201 133 0 / 0.18);
+    --good: #3fb871; --bad: #ef6b5f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141311; --surface: #1d1b18; --line: #33302a;
+  --ink: #f0eee8; --ink-2: #c3bfb3; --muted: #8f8a7d;
+  --accent: #e0a92a; --accent-ink: #1c1a16;
+  --series: #c98500; --series-soft: rgb(201 133 0 / 0.18);
+  --good: #3fb871; --bad: #ef6b5f; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; }
+* { box-sizing: border-box; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 24px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand svg { width: 36px; height: 36px; flex: none; }
+h1 { font-size: 20px; margin: 0; line-height: 1.2; font-weight: 700; }
+h2 { font-size: 15px; margin: 0; font-weight: 600; }
+.sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; }
+.top { display: grid; gap: 16px; grid-template-columns: 2fr 1fr; }
+@media (max-width: 820px) { .top { grid-template-columns: 1fr; } }
+.label { color: var(--muted); font-size: 13px; font-weight: 500; }
+.hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-top: 4px; }
+.hero .big { font-size: 48px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.hero .aside { color: var(--ink-2); font-size: 14px; }
+.goal { margin-top: 16px; }
+.goal-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; flex-wrap: wrap; }
+.bar { height: 10px; background: var(--bg); border-radius: 99px; overflow: hidden; border: 1px solid var(--line); }
+.bar > div { height: 100%; background: var(--series); border-radius: 99px; width: 0; transition: width .4s; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+@media (max-width: 620px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+.tile { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.tile .v { font-size: 18px; font-weight: 600; margin-top: 4px; overflow-wrap: anywhere; }
+.tile .d { font-size: 12px; margin-top: 2px; }
+.good { color: var(--good); } .bad { color: var(--bad); }
+.price-big { font-size: 30px; font-weight: 700; margin-top: 4px; }
+dl { margin: 12px 0 0; }
+dl div { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+dt { color: var(--ink-2); } dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.note { font-size: 12px; color: var(--muted); margin: 10px 0 0; line-height: 1.45; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+button { font: inherit; cursor: pointer; border-radius: 10px; padding: 8px 12px; font-size: 14px; font-weight: 600;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+button:hover { background: var(--bg); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.primary:hover { opacity: .9; background: var(--accent); }
+button.primary:disabled { opacity: .4; cursor: default; }
+button.small { padding: 5px 9px; font-size: 12px; }
+button.link { border: 0; background: none; padding: 2px 4px; font-size: 12px; color: var(--accent); }
+button.link.danger { color: var(--muted); } button.link.danger:hover { color: var(--bad); }
+.form { border-color: var(--accent); }
+.grid5 { display: grid; gap: 12px; grid-template-columns: 1fr 1.3fr .8fr 1fr 1fr; margin-top: 12px; }
+@media (max-width: 820px) { .grid5 { grid-template-columns: 1fr 1fr; } }
+.grid3 { display: grid; gap: 14px; grid-template-columns: repeat(3, 1fr); margin-top: 12px; }
+@media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
+label.f { font-size: 13px; color: var(--ink-2); display: grid; gap: 5px; min-width: 0; }
+label.f small { color: var(--muted); font-size: 12px; }
+input, select { font: inherit; font-size: 15px; width: 100%; min-width: 0; padding: 8px 10px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.unit { display: flex; gap: 6px; } .unit select { width: auto; }
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+table { width: 100%; min-width: 660px; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
+th { text-align: left; color: var(--muted); font-size: 12px; font-weight: 500; padding: 8px; border-bottom: 1px solid var(--line); }
+td { padding: 10px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+.num { text-align: right; }
+.tnote { color: var(--muted); font-size: 12px; }
+.empty { text-align: center; padding: 28px 12px; }
+.empty p { margin: 4px 0; }
+.chart { position: relative; margin-top: 10px; }
+.chart svg { display: block; width: 100%; height: 220px; touch-action: pan-y; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 9px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgb(0 0 0 / .12); width: 140px; }
+.banner { font-size: 13px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink-2); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 2px; }
+.seg button { border: 0; padding: 6px 12px; font-size: 13px; color: var(--ink-2); background: none; }
+.seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+.confirm { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .bar > div { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1d1b18"/><path d="M14 44 L20 30 H44 L50 44 Z" fill="#eda100"/><path d="M22 28 L27 18 H37 L42 28 Z" fill="#f5c04a"/></svg>
+      <div><h1>Gold Tracker</h1><p class="sub">Your gold savings at today's price, in US dollars</p></div>
+    </div>
+    <div class="row">
+      <button id="btn-settings" aria-expanded="false">Settings</button>
+      <button id="btn-import">Import from Robinhood</button>
+      <button id="btn-add" class="primary">+ Add gold</button>
+    </div>
+  </header>
+
+  <div id="store-banner" class="banner" hidden></div>
+
+  <section id="settings" class="card" hidden>
+    <div class="row"><h2>Settings</h2><button class="link" id="settings-close">Close</button></div>
+    <div class="grid3">
+      <label class="f">Savings goal (grams)
+        <input id="set-goal" type="number" inputmode="decimal" min="0">
+        <small id="set-goal-sov"></small>
+      </label>
+      <label class="f">Local premium over spot (%)
+        <input id="set-premium" type="number" inputmode="decimal" step="0.1">
+        <small>Added on top of the live price. Leave at 0 to value at spot.</small>
+      </label>
+      <label class="f">Manual 24K rate per gram (USD)
+        <input id="set-manual" type="number" inputmode="decimal" min="0" placeholder="Leave empty for live price">
+        <small>Use a dealer's rate instead of the live price. Clear it to go back to live.</small>
+      </label>
+    </div>
+  </section>
+
+  <form id="form" class="card form" hidden>
+    <div class="row">
+      <h2 id="form-title">Add gold</h2>
+      <div class="seg" role="radiogroup" aria-label="What did you buy?">
+        <button type="button" role="radio" id="k-physical" aria-checked="true">Physical gold</button>
+        <button type="button" role="radio" id="k-paxg" aria-checked="false">PAXG</button>
+      </div>
+    </div>
+    <div class="grid5" id="fields-paxg" hidden>
+      <label class="f">Date <input id="x-date" type="date"></label>
+      <label class="f">Amount invested (USD) <input id="x-amount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="e.g. 100"></label>
+      <label class="f">Price per PAXG (USD) <input id="x-price" type="number" inputmode="decimal" step="0.01" min="0" placeholder="price you bought at"></label>
+      <label class="f">PAXG received <input id="x-qty" type="number" inputmode="decimal" step="any" min="0" placeholder="e.g. 0.0248"></label>
+      <label class="f">Note (optional) <input id="x-note" type="text" placeholder="weekly DCA…"></label>
+    </div>
+    <div class="grid5" id="fields-physical">
+      <label class="f">Date <input id="f-date" type="date"></label>
+      <label class="f">Weight
+        <span class="unit">
+          <input id="f-weight" type="number" inputmode="decimal" step="0.001" min="0" placeholder="e.g. 10">
+          <select id="f-unit" aria-label="Weight unit"><option value="g">g</option><option value="sov">sov</option></select>
+        </span>
+      </label>
+      <label class="f">Purity
+        <select id="f-karat"><option value="24">24K</option><option value="22">22K</option></select>
+      </label>
+      <label class="f">Total paid (USD) <input id="f-paid" type="number" inputmode="decimal" step="0.01" min="0" placeholder="incl. fees"></label>
+      <label class="f">Note (optional) <input id="f-note" type="text" placeholder="coin, bar, chain…"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <p class="note" id="f-hint" style="margin:0"></p>
+      <div class="row">
+        <button type="button" id="f-cancel">Cancel</button>
+        <button type="submit" class="primary" id="f-save">Save</button>
+      </div>
+    </div>
+  </form>
+
+  <section id="import" class="card" hidden aria-live="polite">
+    <div class="row"><h2>Import PAXG buys from Robinhood</h2><button class="link" id="import-close">Close</button></div>
+    <div id="import-body" style="margin-top:10px"></div>
+  </section>
+
+  <div class="top">
+    <section class="card">
+      <div class="label">Total gold saved</div>
+      <div class="hero"><span class="big" id="s-grams">0 g</span><span class="aside" id="s-aside"></span></div>
+      <div class="sub" id="s-split" style="font-size:14px;color:var(--ink-2)" hidden></div>
+      <div class="goal" id="goal">
+        <div class="goal-row"><span id="g-left"></span><span id="g-right"></span></div>
+        <div class="bar" role="progressbar" aria-label="Progress toward goal" aria-valuemin="0" aria-valuemax="100" id="g-bar"><div id="g-fill"></div></div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="label">Worth today</div><div class="v" id="t-value">—</div></div>
+        <div class="tile"><div class="label">Total invested</div><div class="v" id="t-invested">—</div></div>
+        <div class="tile"><div class="label">Gain / loss</div><div class="v" id="t-gain">—</div><div class="d" id="t-gainpct"></div></div>
+        <div class="tile"><div class="label">Avg cost per gram</div><div class="v" id="t-avg">—</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="align-items:flex-start">
+        <div>
+          <div class="label">Today's price · per gram</div>
+          <div class="price-big" id="p-24">—</div>
+          <div class="sub" style="font-size:14px;color:var(--ink-2)">24K <span id="p-change"></span></div>
+        </div>
+        <button class="small" id="p-refresh" hidden>Refresh</button>
+      </div>
+      <dl>
+        <div><dt>22K</dt><dd id="p-22">—</dd></div>
+        <div><dt>1 sovereign (8 g) · 22K</dt><dd id="p-sov22">—</dd></div>
+        <div><dt>1 sovereign (8 g) · 24K</dt><dd id="p-sov24">—</dd></div>
+        <div><dt>1 PAXG (1 troy oz)</dt><dd id="p-oz">—</dd></div>
+      </dl>
+      <p class="note" id="p-note">Loading the live price from Robinhood…</p>
+      <button class="small" id="p-allow" hidden style="margin-top:8px">Allow live price</button>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Gold saved over time</h2>
+    <p class="sub">Total grams held after each purchase</p>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <section class="card" id="ledger"></section>
+</div>
+
+<script>
+(() => {
+  const OZ = 31.1034768, SOV = 8;
+  const PURITY = { 24: 0.999, 22: 0.916 };
+  const karatPrice = (p24, k) => p24 * (PURITY[k] / PURITY[24]);
+  // PAX Gold: one token is backed by one fine troy ounce, so a PAXG buy is
+  // tracked as tokens × 31.1 g and valued at the live PAXG price per gram.
+  const isPaxg = (p) => p.type === 'paxg';
+  const spotPerGram = () => state.live ? state.live.perGram24k : price24k();
+  function worthOf(p, p24) {
+    if (isPaxg(p)) { const r = spotPerGram(); return r == null ? null : p.grams * r; }
+    return p24 == null ? null : p.grams * karatPrice(p24, p.karat);
+  }
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    purchases: [],
+    settings: { goalGrams: 100, premiumPct: 0, manualPrice24k: null },
+    live: null,        // { perGram24k, prevPerGram24k, updatedAt }
+    priceError: null,
+    editing: null,     // purchase id or 'new'
+    confirmDelete: null,
+  };
+  let store = null;    // { purchasesCol, settingsDoc } once db is ready
+
+  // ---------- formatting ----------
+  const money = (n) => n == null || isNaN(n) ? '—' : new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD', minimumFractionDigits: Math.abs(n) >= 1000 ? 0 : 2, maximumFractionDigits: Math.abs(n) >= 1000 ? 0 : 2 }).format(n);
+  const grams = (g) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(g)} g`;
+  const sovs = (g) => { const n = g / SOV; return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n)} sovereign${n === 1 ? '' : 's'}`; };
+  const fmtDate = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function price24k() {
+    const s = state.settings;
+    if (s.manualPrice24k != null) return s.manualPrice24k;
+    if (!state.live) return null;
+    return state.live.perGram24k * (1 + (s.premiumPct || 0) / 100);
+  }
+
+  function sorted() {
+    return [...state.purchases].sort((a, b) => a.date.localeCompare(b.date) || (a.createdAt || 0) - (b.createdAt || 0));
+  }
+
+  // ---------- render ----------
+  function render() {
+    const p24 = price24k();
+    let g = 0, pure = 0, paxgG = 0, invested = 0, value = 0, priced = true;
+    for (const p of state.purchases) {
+      g += p.grams; invested += p.paid;
+      if (isPaxg(p)) { paxgG += p.grams; pure += p.grams; } else pure += p.grams * PURITY[p.karat];
+      const w = worthOf(p, p24);
+      if (w == null) priced = false; else value += w;
+    }
+    $('s-grams').textContent = grams(g);
+    $('s-aside').textContent = g > 0 ? `${sovs(g)} · ${grams(pure)} pure gold` : '';
+    $('s-split').hidden = !(paxgG > 0);
+    $('s-split').textContent = `Physical ${grams(+(g - paxgG).toFixed(3))} · PAXG ${grams(paxgG)}`;
+
+    const goal = state.settings.goalGrams || 0;
+    $('goal').hidden = !(goal > 0);
+    if (goal > 0) {
+      const pct = Math.min(100, (g / goal) * 100);
+      $('g-left').textContent = `Goal: ${grams(goal)} (${sovs(goal)})`;
+      $('g-right').textContent = `${pct.toFixed(1)}%` + (g < goal ? ` · ${grams(goal - g)} to go` : ' · reached');
+      $('g-fill').style.width = pct + '%';
+      $('g-bar').setAttribute('aria-valuenow', Math.round(pct));
+    }
+
+    const hasPrice = p24 != null;
+    const valued = priced && state.purchases.length > 0;
+    $('t-value').textContent = valued ? money(value) : '—';
+    $('t-invested').textContent = state.purchases.length ? money(invested) : '—';
+    $('t-avg').textContent = g > 0 ? money(invested / g) : '—';
+    const gain = value - invested, up = gain >= 0;
+    if (valued) {
+      $('t-gain').textContent = `${up ? '+' : '−'}${money(Math.abs(gain))}`;
+      $('t-gainpct').textContent = invested > 0 ? `${up ? '▲' : '▼'} ${Math.abs(gain / invested * 100).toFixed(2)}%` : '';
+      $('t-gainpct').className = 'd ' + (up ? 'good' : 'bad');
+    } else { $('t-gain').textContent = '—'; $('t-gainpct').textContent = ''; }
+
+    // price card
+    $('p-24').textContent = money(p24);
+    $('p-22').textContent = hasPrice ? money(karatPrice(p24, 22)) : '—';
+    $('p-sov22').textContent = hasPrice ? money(karatPrice(p24, 22) * SOV) : '—';
+    $('p-sov24').textContent = hasPrice ? money(p24 * SOV) : '—';
+    $('p-oz').textContent = spotPerGram() != null ? money(spotPerGram() * OZ) : '—';
+    const manual = state.settings.manualPrice24k != null;
+    const live = state.live;
+    const chg = !manual && live && live.prevPerGram24k ? (live.perGram24k / live.prevPerGram24k - 1) * 100 : null;
+    $('p-change').innerHTML = chg == null ? '' : `<span class="${chg >= 0 ? 'good' : 'bad'}">· ${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}% today</span>`;
+    let note;
+    if (manual) note = 'Using the manual rate from Settings.';
+    else if (live) {
+      const t = new Date(live.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      note = `Live price from PAX Gold (PAXG) on Robinhood. One PAXG is backed by one troy ounce of gold, so it tracks the spot price closely.${state.settings.premiumPct ? ` Includes your ${state.settings.premiumPct}% premium.` : ''} As of ${t}.`;
+      if (state.priceError) note += ` Last refresh failed: ${state.priceError}`;
+    } else note = state.priceError || 'Loading the live price from Robinhood…';
+    $('p-note').textContent = note;
+
+    renderChart();
+    renderLedger(p24);
+  }
+
+  function renderLedger(p24) {
+    const el = $('ledger');
+    if (!state.purchases.length) {
+      el.innerHTML = `<div class="empty"><p style="font-weight:600">No gold recorded yet</p>
+        <p class="tnote">Add each coin, bar or piece you buy (weight, purity, price), or each PAXG buy (dollars in, PAXG received). Everything is tracked in grams.</p>
+        <div class="row" style="justify-content:center;margin-top:12px"><button class="primary" id="empty-add">+ Add your first purchase</button><button id="empty-import">Import PAXG from Robinhood</button></div></div>`;
+      $('empty-add').onclick = () => openForm('new');
+      $('empty-import').onclick = startImport;
+      return;
+    }
+    const rows = sorted().reverse().map((p) => {
+      const worth = worthOf(p, p24);
+      const gain = worth != null ? worth - p.paid : null;
+      const pct = gain != null && p.paid > 0 ? gain / p.paid * 100 : null;
+      const flat = pct == null || Math.abs(pct) < 0.05; // e.g. a PAXG buy at today's price
+      const actions = state.confirmDelete === p.id
+        ? `<span class="confirm">Delete? <button class="link danger" data-del-yes="${p.id}" style="color:var(--bad)">Delete</button><button class="link" data-del-no="1">Keep</button></span>`
+        : `<button class="link" data-edit="${p.id}">Edit</button><button class="link danger" data-del="${p.id}">Delete</button>`;
+      return `<tr>
+        <td>${fmtDate(p.date)}${p.note ? `<div class="tnote">${esc(p.note)}</div>` : ''}</td>
+        <td class="num" style="font-weight:600">${grams(p.grams)}${isPaxg(p) ? `<div class="tnote">${p.paxg} PAXG</div>` : p.grams % SOV === 0 ? `<div class="tnote">${sovs(p.grams)}</div>` : ''}</td>
+        <td>${isPaxg(p) ? 'PAXG' : p.karat + 'K'}</td>
+        <td class="num">${money(p.paid)}</td>
+        <td class="num" style="color:var(--ink-2)">${money(p.paid / p.grams)}</td>
+        <td class="num">${money(worth)}</td>
+        <td class="num ${flat ? '' : gain >= 0 ? 'good' : 'bad'}">${pct == null ? '—' : flat ? '0.0%' : `${gain >= 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}%`}</td>
+        <td class="num">${actions}</td></tr>`;
+    }).join('');
+    el.innerHTML = `<h2>Purchases</h2><div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th class="num">Weight</th><th>Purity</th><th class="num">Paid</th><th class="num">Paid / g</th><th class="num">Worth today</th><th class="num">Gain</th><th><span hidden>Actions</span></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  }
+
+  $('ledger').addEventListener('click', async (e) => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.edit) openForm(t.dataset.edit);
+    else if (t.dataset.del) { state.confirmDelete = t.dataset.del; render(); }
+    else if (t.dataset.delNo) { state.confirmDelete = null; render(); }
+    else if (t.dataset.delYes) {
+      const id = t.dataset.delYes;
+      state.confirmDelete = null;
+      state.purchases = state.purchases.filter((p) => p.id !== id);
+      render();
+      if (store) try { await store.purchasesCol.doc(id).delete(); } catch (err) { showStoreError(err); }
+    }
+  });
+
+  // ---------- chart ----------
+  let hoverDate = null;
+  function renderChart() {
+    const el = $('chart');
+    const list = sorted();
+    if (!list.length) { el.innerHTML = `<p class="tnote" style="text-align:center;padding:40px 0">Your chart appears after the first purchase.</p>`; return; }
+    const W = Math.max(280, el.clientWidth || 600), H = 220, P = { t: 14, r: 12, b: 26, l: 46 };
+    const pts = []; let tot = 0;
+    for (const p of list) {
+      tot += p.grams;
+      const last = pts[pts.length - 1];
+      if (last && last.date === p.date) last.g = tot; else pts.push({ date: p.date, t: new Date(p.date + 'T00:00:00').getTime(), g: tot });
+    }
+    const t0 = pts[0].t, t1 = Math.max(Date.now(), pts[pts.length - 1].t + 864e5);
+    const goal = state.settings.goalGrams || 0, showGoal = goal > 0 && goal <= tot * 1.5;
+    const raw = Math.max(tot, showGoal ? goal : 0) * 1.05;
+    const mag = 10 ** Math.floor(Math.log10(raw || 1));
+    const yMax = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw) || 10 * mag;
+    const iw = W - P.l - P.r, ih = H - P.t - P.b;
+    const x = (t) => P.l + (t - t0) / ((t1 - t0) || 1) * iw, y = (g) => P.t + ih - g / yMax * ih;
+    let d = `M${x(t0)},${y(0)} L${x(t0)},${y(pts[0].g)}`;
+    for (let i = 1; i < pts.length; i++) d += ` L${x(pts[i].t)},${y(pts[i - 1].g)} L${x(pts[i].t)},${y(pts[i].g)}`;
+    d += ` L${x(t1)},${y(tot)}`;
+    const ticks = [0, .25, .5, .75, 1].map((f) => f * yMax);
+    const xl = [t0, (t0 + t1) / 2, t1].map((t) => new Date(t).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }));
+    const hv = pts.find((p) => p.date === hoverDate);
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gold held over time, now ${grams(tot)}">
+      ${ticks.map((v) => `<line x1="${P.l}" x2="${P.l + iw}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${P.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${+v.toFixed(1)}g</text>`).join('')}
+      ${xl.map((l, i) => `<text x="${P.l + iw * i / 2}" y="${H - 6}" text-anchor="${['start', 'middle', 'end'][i]}" font-size="11" fill="var(--muted)">${l}</text>`).join('')}
+      ${showGoal ? `<line x1="${P.l}" x2="${P.l + iw}" y1="${y(goal)}" y2="${y(goal)}" stroke="var(--ink-2)" stroke-dasharray="4 4"/><text x="${P.l + iw}" y="${y(goal) - 5}" text-anchor="end" font-size="11" fill="var(--ink-2)">Goal ${grams(goal)}</text>` : ''}
+      <path d="${d} L${x(t1)},${y(0)} Z" fill="var(--series-soft)"/>
+      <path d="${d}" fill="none" stroke="var(--series)" stroke-width="2" stroke-linejoin="round"/>
+      ${hv ? `<line x1="${x(hv.t)}" x2="${x(hv.t)}" y1="${P.t}" y2="${P.t + ih}" stroke="var(--muted)"/>` : ''}
+      ${pts.map((p) => `<circle cx="${x(p.t)}" cy="${y(p.g)}" r="${p === hv ? 5 : 3.5}" fill="var(--series)" stroke="var(--surface)" stroke-width="2"/>`).join('')}
+    </svg>${hv ? `<div class="tip" style="left:${Math.min(Math.max(x(hv.t) - 70, 0), W - 140)}px;top:${Math.max(y(hv.g) - 52, 0)}px"><div class="tnote">${fmtDate(hv.date)}</div><div style="font-weight:600">${grams(hv.g)} held</div></div>` : ''}`;
+    const svg = el.querySelector('svg');
+    svg.onpointermove = (e) => {
+      const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * (W / r.width);
+      let n = pts[0]; for (const p of pts) if (Math.abs(x(p.t) - px) < Math.abs(x(n.t) - px)) n = p;
+      if (n.date !== hoverDate) { hoverDate = n.date; renderChart(); }
+    };
+    svg.onpointerleave = () => { hoverDate = null; renderChart(); };
+  }
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderChart, 100); });
+
+  // ---------- form ----------
+  let kind = 'physical', lastUnit = 'g';
+  const tokens = (n) => String(Number(n.toFixed(8)));
+  function setKind(k) {
+    kind = k;
+    $('k-physical').setAttribute('aria-checked', String(k === 'physical'));
+    $('k-paxg').setAttribute('aria-checked', String(k === 'paxg'));
+    $('fields-physical').hidden = k !== 'physical';
+    $('fields-paxg').hidden = k !== 'paxg';
+    formHint();
+  }
+  $('k-physical').onclick = () => setKind('physical');
+  $('k-paxg').onclick = () => setKind('paxg');
+
+  function openForm(which) {
+    state.editing = which; lastUnit = 'g';
+    const p = which === 'new' ? null : state.purchases.find((x) => x.id === which);
+    $('form-title').textContent = p ? 'Edit purchase' : 'Add gold';
+    const paxg = p && isPaxg(p);
+    for (const id of ['f-date', 'x-date']) { $(id).value = p ? p.date : today(); $(id).max = today(); }
+    $('f-unit').value = 'g';
+    $('f-weight').value = p && !paxg ? p.grams : '';
+    $('f-karat').value = p && !paxg ? p.karat : '24';
+    $('f-paid').value = p && !paxg ? p.paid : '';
+    $('f-note').value = p && !paxg ? (p.note || '') : '';
+    const live = state.live ? state.live.perGram24k * OZ : null;
+    $('x-amount').value = paxg ? p.paid : '';
+    $('x-qty').value = paxg ? p.paxg : '';
+    $('x-price').value = paxg ? (p.paid / p.paxg).toFixed(2) : live ? live.toFixed(2) : '';
+    $('x-note').value = paxg ? (p.note || '') : '';
+    $('form').hidden = false;
+    setKind(paxg ? 'paxg' : p ? 'physical' : kind);
+    (kind === 'paxg' ? $('x-amount') : $('f-weight')).focus();
+    $('form').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  const formGrams = () => kind === 'paxg'
+    ? Number($('x-qty').value) * OZ
+    : Number($('f-weight').value) * ($('f-unit').value === 'sov' ? SOV : 1);
+  const formPaid = () => kind === 'paxg' ? $('x-amount').value : $('f-paid').value;
+  function formHint() {
+    const g = formGrams(), paidStr = formPaid(), paid = Number(paidStr), p24 = price24k();
+    const bits = [];
+    if ((kind === 'paxg' || $('f-unit').value === 'sov') && g > 0) bits.push(`= ${grams(+g.toFixed(3))} of gold.`);
+    if (g > 0 && paid > 0) bits.push(`You paid ${money(paid / g)}/g.`);
+    if (kind === 'paxg') { const r = spotPerGram(); if (r != null) bits.push(`Today's spot rate is ${money(r)}/g.`); }
+    else if (p24 != null) { const k = Number($('f-karat').value); bits.push(`Today's ${k}K rate is ${money(karatPrice(p24, k))}/g.`); }
+    $('f-hint').textContent = bits.join(' ');
+    const date = kind === 'paxg' ? $('x-date').value : $('f-date').value;
+    $('f-save').disabled = !(g > 0 && paidStr !== '' && paid >= 0 && date);
+  }
+  ['f-weight', 'f-paid', 'f-karat', 'f-date', 'x-date'].forEach((id) => $(id).addEventListener('input', formHint));
+  // PAXG: amount ÷ price = tokens; typing the tokens instead back-fills the price.
+  $('x-amount').addEventListener('input', () => {
+    const a = Number($('x-amount').value), pr = Number($('x-price').value);
+    if (pr > 0 && $('x-amount').value !== '') $('x-qty').value = tokens(a / pr);
+    formHint();
+  });
+  $('x-price').addEventListener('input', () => {
+    const a = Number($('x-amount').value), pr = Number($('x-price').value);
+    if (pr > 0 && $('x-amount').value !== '') $('x-qty').value = tokens(a / pr);
+    formHint();
+  });
+  $('x-qty').addEventListener('input', () => {
+    const a = Number($('x-amount').value), q = Number($('x-qty').value);
+    if (q > 0 && $('x-amount').value !== '') $('x-price').value = (a / q).toFixed(2);
+    formHint();
+  });
+  $('f-unit').addEventListener('change', () => {
+    const v = Number($('f-weight').value), next = $('f-unit').value;
+    if ($('f-weight').value !== '' && next !== lastUnit) $('f-weight').value = +(next === 'sov' ? v / SOV : v * SOV).toFixed(4);
+    lastUnit = next; formHint();
+  });
+  $('f-cancel').onclick = () => { $('form').hidden = true; state.editing = null; };
+  $('btn-add').onclick = () => openForm('new');
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const g = formGrams(); if (!(g > 0) || $('f-save').disabled) return;
+    const existing = state.editing !== 'new' ? state.purchases.find((x) => x.id === state.editing) : null;
+    const base = {
+      id: existing ? existing.id : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+      createdAt: existing ? existing.createdAt : Date.now(),
+      paid: Number(formPaid()),
+    };
+    const rec = kind === 'paxg'
+      ? { ...base, type: 'paxg', karat: 24, date: $('x-date').value, paxg: Number($('x-qty').value), grams: +g.toFixed(6), note: $('x-note').value.trim() }
+      : { ...base, type: 'physical', karat: Number($('f-karat').value), date: $('f-date').value, grams: +g.toFixed(4), note: $('f-note').value.trim() };
+    state.purchases = existing ? state.purchases.map((p) => p.id === rec.id ? rec : p) : [...state.purchases, rec];
+    $('form').hidden = true; state.editing = null;
+    render();
+    if (store) { const { id, ...data } = rec; try { await store.purchasesCol.doc(id).set(data); } catch (err) { showStoreError(err); } }
+  });
+
+  // ---------- settings ----------
+  $('btn-settings').onclick = () => {
+    const open = $('settings').hidden;
+    $('settings').hidden = !open; $('btn-settings').setAttribute('aria-expanded', String(open));
+    if (open) {
+      $('set-goal').value = state.settings.goalGrams ?? '';
+      $('set-premium').value = state.settings.premiumPct ?? 0;
+      $('set-manual').value = state.settings.manualPrice24k ?? '';
+      $('set-goal-sov').textContent = state.settings.goalGrams ? `= ${sovs(state.settings.goalGrams)}` : '';
+    }
+  };
+  $('settings-close').onclick = () => { $('settings').hidden = true; $('btn-settings').setAttribute('aria-expanded', 'false'); };
+  let saveTimer;
+  function settingsChanged() {
+    const goal = $('set-goal').value === '' ? 0 : Math.max(0, Number($('set-goal').value));
+    const manual = $('set-manual').value === '' ? null : Math.max(0, Number($('set-manual').value));
+    state.settings = { goalGrams: goal, premiumPct: Number($('set-premium').value) || 0, manualPrice24k: manual };
+    $('set-goal-sov').textContent = goal ? `= ${sovs(goal)}` : '';
+    render();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => { if (store) try { await store.settingsDoc.set({ ...state.settings }); } catch (err) { showStoreError(err); } }, 600);
+  }
+  ['set-goal', 'set-premium', 'set-manual'].forEach((id) => $(id).addEventListener('input', settingsChanged));
+
+  // ---------- import PAXG buys from Robinhood ----------
+  // Reads filled PAXG buy orders from every Robinhood account that has crypto,
+  // shows the ones not imported yet, and saves them as PAXG purchases keyed by
+  // the Robinhood order id (so importing twice never duplicates a buy).
+  let pending = [];
+  const importBody = (html) => { $('import-body').innerHTML = html; };
+  function importError(e) {
+    switch (e && e.code) {
+      case 'server_not_connected': case 'server_not_found':
+        return 'Add the Robinhood connector in claude.ai Settings → Connectors, then try again.';
+      case 'needs_reauth': return 'Reconnect Robinhood in claude.ai Settings → Connectors, then try again.';
+      case 'selection_required': return 'Choose which Robinhood connector to use when claude.ai asks, then try again.';
+      case 'approval_required': case 'not_in_manifest': case 'consent_required':
+        return 'Importing needs your permission to read your Robinhood accounts and orders. Try again and choose Allow.';
+      case 'server_unavailable': return 'Robinhood is not answering right now. Try again in a minute.';
+      case 'not_granted': case 'capability_disabled': case 'capability_removed':
+        return 'Importing is not available in this view. Open the page on claude.ai.';
+      default: return `Couldn't read your Robinhood orders (${(e && e.message) || 'unknown error'}).`;
+    }
+  }
+  async function startImport() {
+    $('import').hidden = false;
+    $('import').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    importBody('<p class="note" style="margin:0">Reading your PAXG orders from Robinhood…</p>');
+    const mcp = await claude.use('mcp');
+    if (!mcp) { importBody(`<p class="note" style="margin:0">${importError({ code: 'not_granted' })}</p>`); return; }
+    try {
+      const acc = await mcp.callTool('Robinhood', 'get_accounts', {}, { cache: false });
+      const accounts = ((acc.payload && acc.payload.data && acc.payload.data.accounts) || [])
+        .filter((a) => a.rhc_account_number && !a.deactivated);
+      const orders = [];
+      for (const a of accounts) {
+        let cursor;
+        for (let page = 0; page < 20; page++) {
+          const input = { rhs_account_number: a.rhs_account_number, symbol: 'PAXG', side: 'buy', state: 'filled' };
+          if (cursor) input.cursor = cursor;
+          const r = await mcp.callTool('Robinhood', 'get_crypto_orders', input, { cache: false });
+          const data = (r.payload && r.payload.data) || {};
+          orders.push(...(data.results || []));
+          cursor = data.next || (r.payload && r.payload.next);
+          if (!cursor) break;
+        }
+      }
+      const have = new Set(state.purchases.map((p) => p.rhOrderId).filter(Boolean));
+      pending = orders
+        .filter((o) => o.currency_code === 'PAXG' && o.side === 'buy' && o.state === 'filled' && !have.has(o.id))
+        .map((o) => {
+          const qty = Number(o.cumulative_quantity || o.quantity);
+          const paid = Number(o.rounded_executed_notional_with_fee || o.total_executed_notional) || qty * Number(o.average_price);
+          return { rhOrderId: o.id, date: String(o.created_at).slice(0, 10), paxg: qty, paid: +paid.toFixed(2), avg: Number(o.average_price) };
+        })
+        .filter((o) => o.paxg > 0 && o.paid >= 0)
+        .sort((a, b) => a.date.localeCompare(b.date));
+      renderImport(orders.length, accounts.length);
+    } catch (e) {
+      importBody(`<p class="note" style="margin:0">${esc(importError(e))}</p><button class="small" id="import-retry" style="margin-top:8px">Try again</button>`);
+      $('import-retry').onclick = startImport;
+    }
+  }
+  function renderImport(found, accountCount) {
+    if (!pending.length) {
+      importBody(`<p class="note" style="margin:0">${found ? `All ${found} filled PAXG buys from your Robinhood account${accountCount === 1 ? '' : 's'} are already in your tracker.` : 'No filled PAXG buys found in your Robinhood accounts.'}</p>`);
+      return;
+    }
+    const g = pending.reduce((t, o) => t + o.paxg * OZ, 0), usd = pending.reduce((t, o) => t + o.paid, 0);
+    importBody(`<p style="margin:0 0 8px">Found <strong>${pending.length} new PAXG buy${pending.length === 1 ? '' : 's'}</strong>: ${money(usd)} for ${grams(+g.toFixed(3))} of gold.</p>
+      <div class="table-wrap"><table style="min-width:520px">
+        <thead><tr><th>Date</th><th class="num">Paid</th><th class="num">PAXG</th><th class="num">Grams</th><th class="num">Avg price</th></tr></thead>
+        <tbody>${pending.map((o) => `<tr><td>${fmtDate(o.date)}</td><td class="num">${money(o.paid)}</td><td class="num">${o.paxg}</td><td class="num">${grams(+(o.paxg * OZ).toFixed(3))}</td><td class="num">${money(o.avg)}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <div class="row" style="margin-top:12px;justify-content:flex-end">
+        <button id="import-cancel">Cancel</button>
+        <button class="primary" id="import-go">Import ${pending.length} buy${pending.length === 1 ? '' : 's'}</button>
+      </div>`);
+    $('import-cancel').onclick = () => { $('import').hidden = true; pending = []; };
+    $('import-go').onclick = saveImport;
+  }
+  async function saveImport() {
+    $('import-go').disabled = true;
+    const recs = pending.map((o, i) => ({
+      id: 'rh-' + o.rhOrderId, rhOrderId: o.rhOrderId, createdAt: Date.now() + i,
+      type: 'paxg', karat: 24, date: o.date, paxg: o.paxg, grams: +(o.paxg * OZ).toFixed(6), paid: o.paid,
+      note: 'Robinhood',
+    }));
+    const ids = new Set(recs.map((r) => r.id));
+    state.purchases = [...state.purchases.filter((p) => !ids.has(p.id)), ...recs];
+    render();
+    let failed = 0;
+    if (store) for (const r of recs) {
+      const { id, ...data } = r;
+      try { await store.purchasesCol.doc(id).set(data); } catch (err) { failed++; }
+    }
+    importBody(`<p class="note" style="margin:0">${failed ? `Imported ${recs.length - failed} of ${recs.length} buys. ${failed} could not be saved; run the import again to retry them.` : `Imported ${recs.length} PAXG buy${recs.length === 1 ? '' : 's'}.`}${store ? '' : ' Sign in to claude.ai to keep them after you close this page.'}</p>`);
+    pending = [];
+  }
+  $('btn-import').onclick = startImport;
+  $('import-close').onclick = () => { $('import').hidden = true; pending = []; };
+
+  // ---------- storage (private per-person rows in the artifact's db) ----------
+  function showStoreError(err) {
+    const b = $('store-banner'); b.hidden = false;
+    b.textContent = `Couldn't save that change (${err && err.code || 'error'}). It is shown here but may not be kept after you reload.`;
+  }
+  async function initStore() {
+    const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+    const id = db && user ? await user.id() : null;
+    if (!db || !id) {
+      const b = $('store-banner'); b.hidden = false;
+      b.textContent = 'Sign in to claude.ai to save your purchases. Anything you add now is only kept until you close this page.';
+      return;
+    }
+    const base = `data/users/${id}/gold`;
+    store = { purchasesCol: db.collection(`${base}/purchases`), settingsDoc: db.doc(base) };
+    store.purchasesCol.onSnapshot((snap) => {
+      state.purchases = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        .filter((p) => p.date && p.grams > 0 && p.paid >= 0 && (isPaxg(p) ? p.paxg > 0 : PURITY[p.karat]));
+      render();
+    }, (err) => showStoreError(err));
+    store.settingsDoc.onSnapshot((snap) => {
+      if (snap.exists) { state.settings = { ...state.settings, ...snap.data() }; render(); }
+    });
+  }
+
+  // ---------- live price: PAXG-USD on the viewer's Robinhood connector ----------
+  function applyQuote(result) {
+    const q = result && result.payload && result.payload.data && result.payload.data.results && result.payload.data.results[0];
+    let mark = q ? Number(q.mark_price) : 0;
+    if (!(mark > 0) && q) mark = Number(q.bid_price) || Number(q.ask_price) || 0;
+    if (!(mark > 0)) { state.priceError = 'Robinhood returned no PAXG price.'; render(); return; }
+    const open = Number(q.open_price);
+    state.live = { perGram24k: mark / OZ, prevPerGram24k: open > 0 ? open / OZ : null,
+      updatedAt: result.cache ? result.cache.storedAt : (Date.parse(q.updated_at) || Date.now()) };
+    state.priceError = null;
+    render();
+  }
+  function priceErrorText(e) {
+    switch (e && e.code) {
+      case 'server_not_connected': case 'server_not_found':
+        return 'Add the Robinhood connector in claude.ai Settings → Connectors for a live price, or set a manual rate in Settings.';
+      case 'needs_reauth': return 'Reconnect Robinhood in claude.ai Settings → Connectors to refresh the live price.';
+      case 'selection_required': return 'Choose which Robinhood connector to use when claude.ai asks, or set a manual rate in Settings.';
+      case 'approval_required': case 'not_in_manifest': case 'consent_required':
+        return 'Live price needs your permission to read quotes from Robinhood.';
+      case 'server_unavailable': return 'Robinhood is not answering right now. Showing the last price.';
+      case 'not_granted': case 'capability_disabled': case 'capability_removed':
+        return 'Live prices are not available in this view. Set a manual rate in Settings.';
+      default: return `Couldn't load the live price (${(e && e.message) || 'unknown error'}). You can set a manual rate in Settings.`;
+    }
+  }
+  async function initPrice() {
+    const mcp = await claude.use('mcp');
+    if (!mcp) { state.priceError = 'Live prices are not available in this view. Set a manual rate in Settings.'; render(); return; }
+    const input = { symbols: ['PAXG-USD'] };
+    mcp.watchTool('Robinhood', 'get_crypto_quotes', input, (ev) => {
+      if (ev.type === 'data') { $('p-allow').hidden = true; applyQuote(ev.result); return; }
+      const code = ev.error && ev.error.code;
+      if (['needs_reauth', 'server_not_connected', 'blocked_by_policy', 'approval_required', 'not_in_manifest', 'consent_required'].includes(code)) state.live = null;
+      $('p-allow').hidden = !['approval_required', 'not_in_manifest', 'consent_required'].includes(code);
+      state.priceError = priceErrorText(ev.error);
+      render();
+    }, { refetchInterval: 60000, cache: { staleTime: 30000, gcTime: 600000 } });
+    $('p-allow').onclick = async () => {
+      try { applyQuote(await mcp.callTool('Robinhood', 'get_crypto_quotes', input, { cache: { staleTime: 30000, gcTime: 600000 } })); $('p-allow').hidden = true; }
+      catch (e) { state.priceError = priceErrorText(e); render(); }
+    };
+    $('p-refresh').hidden = false;
+    $('p-refresh').onclick = async () => {
+      $('p-refresh').disabled = true;
+      try { applyQuote(await mcp.callTool('Robinhood', 'get_crypto_quotes', input, { cache: { staleTime: 0, gcTime: 600000, refresh: true } })); }
+      catch (e) { state.priceError = priceErrorText(e); render(); }
+      $('p-refresh').disabled = false;
+    };
+  }
+
+  render();
+  if (window.claude && claude.use) { initStore(); initPrice(); }
+  else { state.priceError = 'Open this page on claude.ai for live prices and saving.'; render(); }
+})();
+</script>

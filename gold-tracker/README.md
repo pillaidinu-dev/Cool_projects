@@ -47,6 +47,16 @@ cd gold-tracker/client && npm install && npm run dev    # app on :5173, proxies 
 For a production build, run `npm run build` in `client/`. Then run `npm start` in `server/` and
 open http://localhost:4400.
 
+## Claude artifact version
+
+`artifact/gold-tracker.html` is a single-page version of the tracker, published as a claude.ai
+artifact. It works in USD and keeps purchases privately in the artifact's per-user database rather
+than in the browser. It reads the live price from PAX Gold (PAXG) quotes on the viewer's Robinhood
+connector. It also has **Import from Robinhood**: this reads every filled PAXG buy from the
+viewer's Robinhood accounts, previews the buys not imported yet, and saves them as PAXG purchases.
+Each saved buy is keyed by its Robinhood order id, so running the import again never duplicates a
+buy.
+
 ## Notes
 
 - Your data is stored per browser. Export a backup before you switch devices or clear browser

@@ -53,7 +53,8 @@ open http://localhost:4400.
 artifact. It works in USD and keeps purchases privately in the artifact's per-user database rather
 than in the browser. It reads the live price from PAX Gold (PAXG) quotes on the viewer's Robinhood
 connector. It also has **Import from Robinhood**: this reads every filled PAXG buy from the
-viewer's Robinhood accounts, previews the buys not imported yet, and saves them as PAXG purchases.
+viewer's Robinhood accounts, previews the buys not imported yet with a checkbox on each, and saves only the ticked ones as PAXG
+purchases. Unticked buys show up again the next time you import.
 Each saved buy is keyed by its Robinhood order id, so running the import again never duplicates a
 buy.
 

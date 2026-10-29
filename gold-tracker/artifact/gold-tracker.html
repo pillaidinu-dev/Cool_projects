@@ -100,6 +100,8 @@ tr:last-child td { border-bottom: 0; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 2px; }
 .seg button { border: 0; padding: 6px 12px; font-size: 13px; color: var(--ink-2); background: none; }
 .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+.pick { width: 18px; height: 18px; padding: 0; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
+tr.off td { color: var(--muted); }
 .confirm { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .bar > div { transition: none; } }
 </style>
@@ -603,22 +605,54 @@ tr:last-child td { border-bottom: 0; }
       importBody(`<p class="note" style="margin:0">${found ? `All ${found} filled PAXG buys from your Robinhood account${accountCount === 1 ? '' : 's'} are already in your tracker.` : 'No filled PAXG buys found in your Robinhood accounts.'}</p>`);
       return;
     }
-    const g = pending.reduce((t, o) => t + o.paxg * OZ, 0), usd = pending.reduce((t, o) => t + o.paid, 0);
-    importBody(`<p style="margin:0 0 8px">Found <strong>${pending.length} new PAXG buy${pending.length === 1 ? '' : 's'}</strong>: ${money(usd)} for ${grams(+g.toFixed(3))} of gold.</p>
-      <div class="table-wrap"><table style="min-width:520px">
-        <thead><tr><th>Date</th><th class="num">Paid</th><th class="num">PAXG</th><th class="num">Grams</th><th class="num">Avg price</th></tr></thead>
-        <tbody>${pending.map((o) => `<tr><td>${fmtDate(o.date)}</td><td class="num">${money(o.paid)}</td><td class="num">${o.paxg}</td><td class="num">${grams(+(o.paxg * OZ).toFixed(3))}</td><td class="num">${money(o.avg)}</td></tr>`).join('')}</tbody>
+    pending.forEach((o) => { if (o.selected === undefined) o.selected = true; });
+    importBody(`<p style="margin:0 0 4px">Found <strong>${pending.length} new PAXG buy${pending.length === 1 ? '' : 's'}</strong>. Untick any you don't want to import.</p>
+      <div class="table-wrap"><table style="min-width:560px">
+        <thead><tr>
+          <th style="width:36px"><input type="checkbox" class="pick" id="pick-all" aria-label="Select all buys"></th>
+          <th>Date</th><th class="num">Paid</th><th class="num">PAXG</th><th class="num">Grams</th><th class="num">Avg price</th></tr></thead>
+        <tbody>${pending.map((o, i) => `<tr data-row="${i}">
+          <td><input type="checkbox" class="pick" data-pick="${i}" aria-label="Import the ${esc(fmtDate(o.date))} buy of ${esc(money(o.paid))}"></td>
+          <td>${fmtDate(o.date)}</td><td class="num">${money(o.paid)}</td><td class="num">${o.paxg}</td><td class="num">${grams(+(o.paxg * OZ).toFixed(3))}</td><td class="num">${money(o.avg)}</td></tr>`).join('')}</tbody>
       </table></div>
-      <div class="row" style="margin-top:12px;justify-content:flex-end">
-        <button id="import-cancel">Cancel</button>
-        <button class="primary" id="import-go">Import ${pending.length} buy${pending.length === 1 ? '' : 's'}</button>
+      <div class="row" style="margin-top:12px">
+        <p class="note" id="import-sum" style="margin:0"></p>
+        <div class="row">
+          <button id="import-cancel">Cancel</button>
+          <button class="primary" id="import-go"></button>
+        </div>
       </div>`);
+    $('import-body').querySelectorAll('[data-pick]').forEach((box) => {
+      box.addEventListener('change', () => { pending[Number(box.dataset.pick)].selected = box.checked; syncPicks(); });
+    });
+    $('pick-all').addEventListener('change', () => { pending.forEach((o) => { o.selected = $('pick-all').checked; }); syncPicks(); });
     $('import-cancel').onclick = () => { $('import').hidden = true; pending = []; };
     $('import-go').onclick = saveImport;
+    syncPicks();
+  }
+  // Reflect the selection in the boxes, row styling, totals and the button.
+  function syncPicks() {
+    const chosen = pending.filter((o) => o.selected);
+    $('import-body').querySelectorAll('[data-pick]').forEach((box) => {
+      const o = pending[Number(box.dataset.pick)];
+      box.checked = o.selected;
+      box.closest('tr').classList.toggle('off', !o.selected);
+    });
+    const all = $('pick-all');
+    all.checked = chosen.length === pending.length;
+    all.indeterminate = chosen.length > 0 && chosen.length < pending.length;
+    const g = chosen.reduce((t, o) => t + o.paxg * OZ, 0), usd = chosen.reduce((t, o) => t + o.paid, 0);
+    $('import-sum').textContent = chosen.length
+      ? `${chosen.length} of ${pending.length} selected: ${money(usd)} for ${grams(+g.toFixed(3))} of gold.`
+      : 'Nothing selected.';
+    $('import-go').textContent = chosen.length ? `Import ${chosen.length} buy${chosen.length === 1 ? '' : 's'}` : 'Import';
+    $('import-go').disabled = chosen.length === 0;
   }
   async function saveImport() {
+    const chosen = pending.filter((o) => o.selected);
+    if (!chosen.length) return;
     $('import-go').disabled = true;
-    const recs = pending.map((o, i) => ({
+    const recs = chosen.map((o, i) => ({
       id: 'rh-' + o.rhOrderId, rhOrderId: o.rhOrderId, createdAt: Date.now() + i,
       type: 'paxg', karat: 24, date: o.date, paxg: o.paxg, grams: +(o.paxg * OZ).toFixed(6), paid: o.paid,
       note: 'Robinhood',
@@ -631,7 +665,8 @@ tr:last-child td { border-bottom: 0; }
       const { id, ...data } = r;
       try { await store.purchasesCol.doc(id).set(data); } catch (err) { failed++; }
     }
-    importBody(`<p class="note" style="margin:0">${failed ? `Imported ${recs.length - failed} of ${recs.length} buys. ${failed} could not be saved; run the import again to retry them.` : `Imported ${recs.length} PAXG buy${recs.length === 1 ? '' : 's'}.`}${store ? '' : ' Sign in to claude.ai to keep them after you close this page.'}</p>`);
+    const skipped = pending.length - chosen.length;
+    importBody(`<p class="note" style="margin:0">${failed ? `Imported ${recs.length - failed} of ${recs.length} buys. ${failed} could not be saved; run the import again to retry them.` : `Imported ${recs.length} PAXG buy${recs.length === 1 ? '' : 's'}.`}${skipped ? ` The ${skipped} you left unticked will show up again next time you import.` : ''}${store ? '' : ' Sign in to claude.ai to keep them after you close this page.'}</p>`);
     pending = [];
   }
   $('btn-import').onclick = startImport;

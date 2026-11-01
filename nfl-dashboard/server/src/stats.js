@@ -54,7 +54,9 @@ function extractScorer(play) {
   return match ? match[1].trim() : undefined;
 }
 
-// `games` is [{ id, name }]. `fetchSummary` is injectable for testing.
+// `games` is [{ id, name, day }] -- `day` (YYYYMMDD) is optional and, when
+// given, is copied onto each touchdown-feed entry so the client can label
+// which calendar day it happened on. `fetchSummary` is injectable for testing.
 // `todayGameIds`, if given, restricts the touchdown feed to games in that
 // Set -- the passing/rushing/receiving leaders still sum every game in
 // `games` (the whole week), but the touchdown feed/scorers would otherwise
@@ -127,6 +129,7 @@ export async function buildLeaders(games, fetchSummary, todayGameIds) {
         if (todayGameIds && !todayGameIds.has(game.id)) continue;
         touchdowns.push({
           game: game.name,
+          day: game.day,
           team: play.team?.abbreviation,
           period: play.period?.number,
           clock: play.clock?.displayValue,

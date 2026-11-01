@@ -7,7 +7,7 @@ const router = Router();
 router.get('/', async (req, res, next) => {
   try {
     const data = await getWeekScoreboard(req.query.date);
-    const games = data.days.flatMap((day) => day.events.map((e) => ({ id: e.id, name: e.shortName })));
+    const games = data.days.flatMap((day) => day.events.map((e) => ({ id: e.id, name: e.shortName, day: day.date })));
     const todayDate = currentSlateDay(data.days);
     const todayGameIds = new Set((data.days.find((day) => day.date === todayDate)?.events || []).map((e) => e.id));
     const leaders = await buildLeaders(games, getEventSummary, todayGameIds);

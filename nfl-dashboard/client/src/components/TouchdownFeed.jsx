@@ -1,3 +1,11 @@
+// `ymd` is 'YYYYMMDD' as returned by the API, dated in UTC to match how
+// ESPN buckets games by day (same convention as App.jsx's formatDayHeading).
+function formatDayShort(ymd) {
+  if (!ymd) return null;
+  const date = new Date(`${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}T12:00:00Z`);
+  return date.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' });
+}
+
 export default function TouchdownFeed({ touchdowns }) {
   const feed = [...touchdowns].reverse();
 
@@ -10,17 +18,23 @@ export default function TouchdownFeed({ touchdowns }) {
         <p className="px-4 py-6 text-sm text-slate-500">No touchdowns yet.</p>
       ) : (
         <ul className="divide-y divide-slate-700/40 max-h-96 overflow-y-auto">
-          {feed.map((td, i) => (
-            <li key={i} className="px-4 py-3 text-sm">
-              <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                <span>{td.game}</span>
-                <span>
-                  {td.team} · Q{td.period} {td.clock}
-                </span>
-              </div>
-              <p className="text-slate-200">{td.description}</p>
-            </li>
-          ))}
+          {feed.map((td, i) => {
+            const day = formatDayShort(td.day);
+            return (
+              <li key={i} className="px-4 py-3 text-sm">
+                <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                  <span>
+                    {day && <span className="text-slate-400 font-medium mr-1.5">{day}</span>}
+                    {td.game}
+                  </span>
+                  <span>
+                    {td.team} · Q{td.period} {td.clock}
+                  </span>
+                </div>
+                <p className="text-slate-200">{td.description}</p>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

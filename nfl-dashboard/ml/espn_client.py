@@ -3,16 +3,45 @@ historical game-log data the projection models train on. Same data source as
 the Node server (nfl-dashboard/server/src/espn.js), just walked by week
 number instead of by calendar date.
 """
+from datetime import datetime, timedelta, timezone
+
 import requests
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
 TIMEOUT = 20
+
+# NFL games run ~3-4 hours; this comfortably covers overtime and ESPN's own
+# lag in flipping a game's status to "post" once it's actually over.
+GAME_OVER_GRACE = timedelta(hours=8)
 
 
 def _get(path, **params):
     res = requests.get(f"{BASE}/{path}", params=params, timeout=TIMEOUT)
     res.raise_for_status()
     return res.json()
+
+
+def _is_game_over(event):
+    """True once a single game has finished -- by ESPN's own status, or (as
+    a safety net) by wall-clock time since kickoff.
+
+    A game whose status never flips to "post" -- a data glitch on ESPN's
+    side, a rare postponement, anything -- would otherwise wedge
+    get_current_week() on that week forever, since _all_games_final never
+    sees every game as done. Once comfortably more than a game's length has
+    passed since kickoff, treat it as over regardless of what the status
+    field says: by then it has genuinely ended in the real world.
+    """
+    if event.get("status", {}).get("type", {}).get("state") == "post":
+        return True
+    kickoff = event.get("date")
+    if not kickoff:
+        return False
+    try:
+        kickoff_at = datetime.fromisoformat(kickoff.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return datetime.now(timezone.utc) - kickoff_at > GAME_OVER_GRACE
 
 
 def _all_games_final(events):
@@ -27,7 +56,7 @@ def _all_games_final(events):
     """
     if not events:
         return False
-    return all((e.get("status", {}).get("type", {}).get("state")) == "post" for e in events)
+    return all(_is_game_over(e) for e in events)
 
 
 def get_current_week():

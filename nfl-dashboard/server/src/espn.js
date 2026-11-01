@@ -103,6 +103,23 @@ function allGamesFinal(days) {
   return events.length > 0 && events.every(isGameOver);
 }
 
+// Among a week's days (already ordered Thu..Mon), the calendar day whose
+// games are the ones currently live to watch -- the most recent day with at
+// least one game that has already kicked off. Stays on that day (Thursday's
+// games keep showing through the Friday/Saturday gap) until a later day's
+// games actually start, at which point it moves on -- so Thursday's touchdown
+// feed doesn't linger, confusingly mixed in, once Sunday's games kick off.
+// Returns null before any game in the week has kicked off yet.
+export function currentSlateDay(days) {
+  const now = Date.now();
+  let current = null;
+  for (const day of days) {
+    const started = day.events.some((e) => e.date && new Date(e.date).getTime() <= now);
+    if (started) current = day.date;
+  }
+  return current;
+}
+
 // Every game across the NFL week containing `dateOverride` (defaults to
 // now), grouped by the calendar day it was fetched under. Each day is
 // fetched independently and cached together as one week, so a single day's

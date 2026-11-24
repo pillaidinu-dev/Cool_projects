@@ -136,6 +136,7 @@ textarea { resize: vertical; min-height: 60px; }
 .lines { display: grid; gap: 8px; }
 .line { display: grid; grid-template-columns: minmax(0, 1fr) 64px 92px 36px; gap: 6px; align-items: center; }
 .line input, .line select { padding: 9px 8px; }
+.line .lt { text-align: right; font-size: 13px; font-weight: 600; }
 .x { border: 0; background: var(--sunk); border-radius: 8px; height: 38px; cursor: pointer; color: var(--muted); font-size: 18px; }
 .sumbox { background: var(--sunk); border-radius: 10px; padding: 12px; display: grid; gap: 4px; font-size: 14px; }
 .sumbox div { display: flex; justify-content: space-between; gap: 8px; }
@@ -158,11 +159,11 @@ textarea { resize: vertical; min-height: 60px; }
 .mrow.is-hidden .mrow-main { opacity: .6; }
 .mrow-act { display: flex; gap: 6px; flex-wrap: wrap; }
 .bulk { display: grid; gap: 8px; }
-.bulk-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 84px 72px; gap: 6px; align-items: center; }
+.bulk-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 6px; align-items: center; }
 .bulk-row input { padding: 9px 8px; }
 .bulk-head { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .bulk-m { text-align: right; font-size: 13px; font-weight: 600; }
-@media (max-width: 420px) { .bulk-row { grid-template-columns: minmax(0, 1fr) 70px 70px; } .bulk-m, .bulk-head span:last-child { display: none; } }
+
 table.mini { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.mini td { padding: 6px 0; border-top: 1px solid var(--line); }
 table.mini td:last-child { text-align: right; }
@@ -210,8 +211,8 @@ table.mini td:last-child { text-align: right; }
   // ---------- state ----------
   const S = {
     tab: "overview", period: "month",
-    orders: [], expenses: [], products: [], settings: { currency: "$" },
-    loaded: { orders: false, expenses: false, products: false },
+    orders: [], expenses: [], products: [], packs: [], settings: { currency: "$" },
+    loaded: { orders: false, expenses: false, products: false, packs: false },
     db: null, canWrite: true, downloads: null, q: "",
   };
   try { const t = localStorage.getItem("lbs-tab"); if (t) S.tab = t; const p = localStorage.getItem("lbs-period"); if (p) S.period = p; } catch (e) {}
@@ -237,11 +238,14 @@ table.mini td:last-child { text-align: right; }
 
   function orderCalc(o) {
     const items = Array.isArray(o.items) ? o.items : [];
-    const cups = items.reduce((a, i) => a + n(i.qty), 0);
-    const subtotal = items.reduce((a, i) => a + n(i.qty) * n(i.price), 0);
+    const packs = Array.isArray(o.packs) ? o.packs.filter(p => p.packId || p.name) : [];
+    const flavorCups = items.reduce((a, i) => a + n(i.qty), 0);
+    const packCups = packs.reduce((a, p) => a + n(p.qty) * n(p.cups), 0);
+    // Pack orders are priced by pack; orders logged before packs existed keep their per-cup prices.
+    const subtotal = packs.length ? packs.reduce((a, p) => a + n(p.qty) * n(p.price), 0) : items.reduce((a, i) => a + n(i.qty) * n(i.price), 0);
     const cost = items.reduce((a, i) => a + n(i.qty) * n(i.cost), 0);
     const revenue = subtotal + n(o.deliveryFee) - n(o.discount);
-    return { cups, subtotal, cost, revenue, profit: revenue - cost };
+    return { cups: Math.max(flavorCups, packCups), flavorCups, packCups, subtotal, cost, revenue, profit: revenue - cost };
   }
 
   function inPeriod(dateStr, period) {
@@ -305,7 +309,12 @@ table.mini td:last-child { text-align: right; }
 
     // flavors
     const fl = {};
-    for (const o of orders) for (const i of (o.items || [])) { const k = i.name || "Unnamed"; fl[k] = fl[k] || { cups: 0, rev: 0 }; fl[k].cups += n(i.qty); fl[k].rev += n(i.qty) * n(i.price); }
+    const pm = {};
+    for (const o of orders) {
+      for (const i of (o.items || [])) { const k = i.name || "Unnamed"; fl[k] = fl[k] || { cups: 0 }; fl[k].cups += n(i.qty); }
+      for (const p of (o.packs || [])) { const k = p.name || "Pack"; pm[k] = (pm[k] || 0) + n(p.qty); }
+    }
+    const packMix = Object.entries(pm).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} × ${esc(k)}`).join(" · ");
     const flav = Object.entries(fl).sort((a, b) => b[1].cups - a[1].cups).slice(0, 6);
     const maxCups = Math.max(1, ...flav.map(f => f[1].cups));
 
@@ -334,6 +343,7 @@ table.mini td:last-child { text-align: right; }
           <h3>This period at a glance</h3>
           <table class="mini num"><tbody>
             <tr><td>Average order</td><td>${money(avg)}</td></tr>
+            ${packMix ? `<tr><td>Packs sold</td><td>${packMix}</td></tr>` : ""}
             <tr><td>Cup cost (from Menu)</td><td>${money(cogs)}</td></tr>
             <tr><td>Order profit after cup cost</td><td class="${estProfit >= 0 ? "pos" : "neg"}">${money(estProfit)}</td></tr>
             <tr><td>Profit per cup</td><td>${cups ? money(estProfit / cups) : "—"}</td></tr>
@@ -344,7 +354,7 @@ table.mini td:last-child { text-align: right; }
       <div class="grid2" style="margin-top:16px">
         <div class="panel">
           <h3>Best-selling flavors</h3>
-          ${flav.length ? `<div class="bars">${flav.map(([k, v]) => `<div class="barrow"><span>${esc(k)}</span><span class="num muted">${v.cups} cups · ${money(v.rev)}</span><div class="track"><div class="fill" style="width:${(v.cups / maxCups) * 100}%"></div></div></div>`).join("")}</div>` : `<p class="note">Flavors appear here once orders are logged for this period.</p>`}
+          ${flav.length ? `<div class="bars">${flav.map(([k, v]) => `<div class="barrow"><span>${esc(k)}</span><span class="num muted">${v.cups} cup${v.cups === 1 ? "" : "s"}</span><div class="track"><div class="fill" style="width:${(v.cups / maxCups) * 100}%"></div></div></div>`).join("")}</div>` : `<p class="note">Flavors appear here once orders are logged for this period.</p>`}
         </div>
         <div class="panel">
           <h3>Where the money went</h3>
@@ -408,7 +418,7 @@ table.mini td:last-child { text-align: right; }
         </div>
         ${loadingOr("orders", list.length ? `<div class="list">${list.map(o => {
           const c = orderCalc(o);
-          const what = (o.items || []).map(i => `${n(i.qty)}× ${i.name || "?"}`).join(", ");
+          const what = [(o.packs || []).map(p => `${n(p.qty)} × ${p.name}`).join(", "), (o.items || []).map(i => `${n(i.qty)} ${i.name || "?"}`).join(", ")].filter(Boolean).join(" · ");
           return `<button class="item" type="button" data-edit-order="${esc(o.id)}">
             <span class="t">${esc(o.customer || "Walk-in")} <span class="chip ${o.status === "unpaid" ? "unpaid" : "paid"}">${o.status === "unpaid" ? "Unpaid" : "Paid"}</span></span>
             <span class="a num">${money(c.revenue)}</span>
@@ -435,78 +445,92 @@ table.mini td:last-child { text-align: right; }
   }
 
   function renderMenu() {
-    const list = [...S.products].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     const W = S.canWrite;
-    const bulk = W && S.menuDraft;
-    const head = `
-      <div class="row spread" style="margin-bottom:12px"><h2>Menu</h2>
-        ${W && list.length ? (bulk
-          ? `<div class="row"><button type="button" class="btn" data-menu="cancel">Cancel</button><button type="button" class="btn primary" data-menu="save">Save all</button></div>`
-          : `<div class="row"><button type="button" class="btn" data-menu="bulk">Edit all prices</button><button type="button" class="btn primary" data-menu="add">+ Add flavor</button></div>`) : ""}
-      </div>`;
-    if (bulk) {
-      return head + `<div class="panel">
-        <p class="note" style="margin:0 0 10px">Change any name, price or cost, then tap <strong>Save all</strong>. Past orders keep the prices they were sold at.</p>
+    const packs = sortedPacks();
+    const list = [...S.products].sort(byName);
+    if (W && S.menuDraft) {
+      return `
+      <div class="row spread" style="margin-bottom:12px"><h2>Flavor costs</h2>
+        <div class="row"><button type="button" class="btn" data-menu="cancel">Cancel</button><button type="button" class="btn primary" data-menu="save">Save all</button></div></div>
+      <div class="panel">
+        <p class="note" style="margin:0 0 10px">Change any flavor name or what one cup costs to make, then tap <strong>Save all</strong>.</p>
         <div class="bulk">
-          <div class="bulk-row bulk-head"><span>Flavor</span><span>Price</span><span>Cost / cup</span><span>Profit</span></div>
-          ${list.map(p => { const d = S.menuDraft[p.id] || {}; const m = n(d.price) - n(d.cost);
+          <div class="bulk-row bulk-head"><span>Flavor</span><span>Cost / cup</span></div>
+          ${list.map(p => { const d = S.menuDraft[p.id] || {};
             return `<div class="bulk-row" data-id="${esc(p.id)}">
               <input type="text" data-bulk="name" value="${esc(d.name)}" aria-label="Flavor name">
-              <input type="number" data-bulk="price" min="0" step="0.01" inputmode="decimal" value="${esc(d.price)}" aria-label="Price">
               <input type="number" data-bulk="cost" min="0" step="0.01" inputmode="decimal" value="${esc(d.cost)}" aria-label="Cost per cup">
-              <span class="num bulk-m ${m >= 0 ? "pos" : "neg"}">${money(m)}</span>
             </div>`; }).join("")}
         </div></div>`;
     }
-    return head + `
+    const armBtn = (key, extra) => `<button type="button" class="btn small danger ${S.armed === key ? "armed" : ""}" ${extra}>${S.armed === key ? "Tap again" : "Delete"}</button>`;
+    return `
+      <div class="row spread" style="margin-bottom:12px"><h2>Menu</h2></div>
       <div class="panel">
-        <p class="note" style="margin:0 0 8px">Set each flavor's price and what one cup costs you to make (ingredients + cup, lid, spoon). New orders fill these in for you. Hidden flavors stay in past orders but don't show up when you add a new one.</p>
+        <div class="row spread"><h3 style="margin:0">Pack sizes &amp; prices</h3>${W ? `<button type="button" class="btn small primary" data-menu="addpack">+ Add pack</button>` : ""}</div>
+        <p class="note" style="margin:4px 0 8px">What customers pay. New orders are priced by the packs they buy, and customers can mix flavors inside a pack.</p>
+        ${loadingOr("packs", packs.length ? `<div class="list">${packs.map(p => `<div class="mrow">
+            <div class="mrow-main"><span class="t">${esc(p.name)}</span>
+              <span class="d num">${n(p.cups)} cup${n(p.cups) === 1 ? "" : "s"} for ${money(n(p.price))} · ${money(n(p.cups) ? n(p.price) / n(p.cups) : 0)} a cup</span></div>
+            ${W ? `<div class="mrow-act"><button type="button" class="btn small" data-prod-act="editpack" data-id="${esc(p.id)}">Edit</button>${armBtn("pack:" + p.id, `data-prod-act="delpack" data-id="${esc(p.id)}"`)}</div>` : ""}
+          </div>`).join("")}</div>` : `<div class="empty">No pack sizes yet. Tap <strong>+ Add pack</strong>, for example 3 cups for $18.</div>`)}
+      </div>
+      <div class="panel">
+        <div class="row spread"><h3 style="margin:0">Flavors</h3>${W ? `<div class="row">${list.length ? `<button type="button" class="btn small" data-menu="bulk">Edit all costs</button>` : ""}<button type="button" class="btn small primary" data-menu="add">+ Add flavor</button></div>` : ""}</div>
+        <p class="note" style="margin:4px 0 8px">Set what one cup costs you to make (ingredients plus cup, lid and spoon) so the profit on each order is accurate. Hidden flavors stay in past orders but aren't offered on new ones.</p>
         ${loadingOr("products", list.length ? `<div class="list">${list.map(p => {
-          const m = n(p.price) - n(p.cost); const pct = n(p.price) > 0 ? Math.round(m / n(p.price) * 100) : 0;
-          const hidden = p.active === false; const armed = S.armedProd === p.id;
+          const hidden = p.active === false; const c = n(p.cost);
+          const prof = packs.map(k => `${esc(k.name)} ${money(n(k.price) - n(k.cups) * c)}`).join(" · ");
           return `<div class="mrow ${hidden ? "is-hidden" : ""}">
             <div class="mrow-main">
-              <span class="t">${esc(p.name)} ${p.example ? `<span class="chip ex">Example</span>` : ""} ${hidden ? `<span class="chip ex">Hidden</span>` : ""}</span>
-              <span class="d num">Sells ${money(n(p.price))} · costs ${money(n(p.cost))} · <span class="${m >= 0 ? "pos" : "neg"}">${money(m, true)} (${pct}%)</span></span>
+              <span class="t">${esc(p.name)} ${hidden ? `<span class="chip ex">Hidden</span>` : ""} ${c ? "" : `<span class="chip unpaid">Cost not set</span>`}</span>
+              <span class="d num">Costs ${money(c)} a cup${prof ? ` · profit per pack: ${prof}` : ""}</span>
             </div>
             ${W ? `<div class="mrow-act">
               <button type="button" class="btn small" data-prod-act="edit" data-id="${esc(p.id)}">Edit</button>
               <button type="button" class="btn small" data-prod-act="dup" data-id="${esc(p.id)}">Copy</button>
               <button type="button" class="btn small" data-prod-act="toggle" data-id="${esc(p.id)}">${hidden ? "Show" : "Hide"}</button>
-              <button type="button" class="btn small danger ${armed ? "armed" : ""}" data-prod-act="del" data-id="${esc(p.id)}">${armed ? "Tap again" : "Delete"}</button>
+              ${armBtn("prod:" + p.id, `data-prod-act="del" data-id="${esc(p.id)}"`)}
             </div>` : ""}
           </div>`;
-        }).join("")}</div>` : `<div class="empty">${cupSvg}<div>No flavors yet. Tap <strong>+ New flavor</strong> to add your first cup.</div></div>`)}
+        }).join("")}</div>` : `<div class="empty">${cupSvg}<div>No flavors yet. Tap <strong>+ Add flavor</strong>.</div></div>`)}
       </div>`;
   }
 
+  function armOrRun(key, fn) {
+    if (S.armed !== key) { S.armed = key; render(); clearTimeout(armOrRun._t); armOrRun._t = setTimeout(() => { S.armed = null; render(); }, 3000); return; }
+    S.armed = null; fn();
+  }
+
   async function menuAction(act, id) {
-    const p = S.products.find(x => x.id === id);
     if (act === "add") { productForm(); return; }
-    if (act === "bulk") { S.menuDraft = {}; S.products.forEach(x => { S.menuDraft[x.id] = { name: x.name || "", price: x.price ?? "", cost: x.cost ?? "" }; }); render(); return; }
+    if (act === "addpack") { packForm(); return; }
+    if (act === "bulk") { S.menuDraft = {}; S.products.forEach(x => { S.menuDraft[x.id] = { name: x.name || "", cost: x.cost ?? "" }; }); render(); return; }
     if (act === "cancel") { S.menuDraft = null; render(); return; }
     if (act === "save") {
-      const changes = S.products.filter(x => { const d = S.menuDraft[x.id]; return d && (d.name.trim() !== (x.name || "") || r2(n(d.price)) !== r2(n(x.price)) || r2(n(d.cost)) !== r2(n(x.cost))); });
+      const changes = S.products.filter(x => { const d = S.menuDraft[x.id]; return d && (d.name.trim() !== (x.name || "") || r2(n(d.cost)) !== r2(n(x.cost))); });
       if (changes.some(x => !S.menuDraft[x.id].name.trim())) { toast("Every flavor needs a name"); return; }
       const drafts = S.menuDraft; S.menuDraft = null; render();
       if (!changes.length) { toast("No changes"); return; }
       for (const x of changes) {
         const d = drafts[x.id];
-        try { await S.db.doc("products/" + x.id).set({ name: d.name.trim(), price: r2(n(d.price)), cost: r2(n(d.cost)), active: x.active !== false, updatedAt: Date.now() }); }
+        try { await S.db.doc("products/" + x.id).set(flavorDoc(x, { name: d.name.trim(), cost: r2(n(d.cost)) })); }
         catch (e) { handleWriteError(e); return; }
       }
       toast(changes.length === 1 ? "1 flavor updated" : changes.length + " flavors updated");
       return;
     }
+    const k = S.packs.find(x => x.id === id);
+    if (act === "editpack" && k) { packForm(k); return; }
+    if (act === "delpack" && k) { armOrRun("pack:" + id, () => remove("packs/" + id, "Pack deleted")); return; }
+    const p = S.products.find(x => x.id === id);
     if (!p) return;
     if (act === "edit") productForm(p);
-    else if (act === "dup") productForm(null, { name: p.name + " (copy)", price: p.price, cost: p.cost, active: true });
-    else if (act === "toggle") await write("products/" + p.id, { name: p.name, price: n(p.price), cost: n(p.cost), active: p.active === false, updatedAt: Date.now() }, p.active === false ? "Back on the menu" : "Hidden from new orders");
-    else if (act === "del") {
-      if (S.armedProd !== id) { S.armedProd = id; render(); clearTimeout(menuAction._t); menuAction._t = setTimeout(() => { S.armedProd = null; render(); }, 3000); return; }
-      S.armedProd = null; await remove("products/" + id, "Flavor deleted");
-    }
+    else if (act === "dup") productForm(null, { name: p.name + " (copy)", cost: p.cost, active: true });
+    else if (act === "toggle") await write("products/" + p.id, flavorDoc(p, { active: p.active === false }), p.active === false ? "Back on the menu" : "Hidden from new orders");
+    else if (act === "del") armOrRun("prod:" + id, () => remove("products/" + id, "Flavor deleted"));
   }
+  const flavorDoc = (p, patch) => ({ name: p.name, cost: n(p.cost), active: p.active !== false, ...patch, updatedAt: Date.now() });
 
   // ---------- sheets (forms) ----------
   function openSheet(html, onMount) {
@@ -542,31 +566,51 @@ table.mini td:last-child { text-align: right; }
     else toast("Couldn't save. Check your connection and try again.");
   }
 
-  function productOptions(selId) {
-    const ps = S.products.filter(p => p.active !== false || p.id === selId).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    return `<option value="">Custom item…</option>` + ps.map(p => `<option value="${esc(p.id)}" ${p.id === selId ? "selected" : ""}>${esc(p.name)}</option>`).join("");
+  const byName = (a, b) => (a.name || "").localeCompare(b.name || "");
+  const sortedPacks = () => [...S.packs].sort((a, b) => n(a.cups) - n(b.cups) || n(a.price) - n(b.price));
+  function packOptions(sel) {
+    return `<option value="">Choose pack…</option>` + sortedPacks().map(p => `<option value="${esc(p.id)}" ${p.id === sel ? "selected" : ""}>${esc(p.name)} · ${money(n(p.price))}</option>`).join("");
   }
+  function flavorOptions(sel) {
+    const ps = S.products.filter(p => p.active !== false || p.id === sel).sort(byName);
+    return `<option value="">Choose flavor…</option>` + ps.map(p => `<option value="${esc(p.id)}" ${p.id === sel ? "selected" : ""}>${esc(p.name)}</option>`).join("");
+  }
+  const packLine = (p) => p ? { packId: p.id, name: p.name, cups: n(p.cups), price: n(p.price), qty: 1 } : { packId: "", name: "", cups: 0, price: 0, qty: 1 };
 
   function orderForm(existing) {
-    const o = existing ? JSON.parse(JSON.stringify(existing)) : { date: today(), customer: "", items: [], deliveryFee: "", discount: "", payment: "Cash", status: "paid", notes: "" };
-    if (!o.items.length) {
-      const p = S.products.find(p => p.active !== false);
-      o.items.push(p ? { productId: p.id, name: p.name, qty: 1, price: n(p.price), cost: n(p.cost) } : { productId: "", name: "", qty: 1, price: "", cost: 0 });
-    }
-    const lineHtml = (it, i) => `<div class="line" data-i="${i}">
-        ${it.productId || !S.products.length ? `<select data-k="productId" aria-label="Flavor">${productOptions(it.productId)}</select>` : `<input type="text" data-k="name" value="${esc(it.name)}" placeholder="Item name" aria-label="Item name">`}
-        <input type="number" data-k="qty" min="0" step="1" inputmode="numeric" value="${esc(it.qty)}" aria-label="Quantity">
-        <input type="number" data-k="price" min="0" step="0.01" inputmode="decimal" value="${esc(it.price)}" aria-label="Price each">
-        <button type="button" class="x" data-rm="${i}" aria-label="Remove item">×</button>
+    const o = existing ? JSON.parse(JSON.stringify(existing)) : { date: today(), customer: "", packs: [], items: [], deliveryFee: "", discount: "", payment: "Payment app", status: "paid", notes: "" };
+    o.packs = Array.isArray(o.packs) ? o.packs : [];
+    o.items = Array.isArray(o.items) ? o.items : [];
+    const legacy = !!existing && !o.packs.length && o.items.some(i => n(i.price) > 0);
+    if (!existing) { const sp = sortedPacks(); o.packs.push(packLine(sp[0])); }
+    if (!o.items.length) o.items.push({ productId: "", name: "", qty: "" });
+
+    const pLine = (pk, i) => `<div class="line" data-i="${i}">
+        <select data-k="packId" aria-label="Pack">${packOptions(pk.packId)}</select>
+        <input type="number" data-k="qty" min="0" step="1" inputmode="numeric" value="${esc(pk.qty)}" aria-label="How many packs">
+        <span class="num lt">${money(n(pk.qty) * n(pk.price))}</span>
+        <button type="button" class="x" data-rmp="${i}" aria-label="Remove pack">×</button>
       </div>`;
+    const fLine = (it, i) => `<div class="line" data-i="${i}">
+        ${it.productId || !legacy ? `<select data-k="productId" aria-label="Flavor">${flavorOptions(it.productId)}</select>` : `<input type="text" value="${esc(it.name)}" disabled>`}
+        <input type="number" data-k="qty" min="0" step="1" inputmode="numeric" value="${esc(it.qty)}" placeholder="cups" aria-label="Cups of this flavor">
+        <span class="num lt muted">${it.productId || it.cost ? money(n(it.qty) * n(it.cost)) : ""}</span>
+        <button type="button" class="x" data-rmf="${i}" aria-label="Remove flavor">×</button>
+      </div>`;
+
     openSheet(`
       <div class="row spread"><h2>${existing ? "Edit order" : "New order"}</h2><button type="button" class="btn small" data-close>Close</button></div>
       <div class="fgrid">
         <div class="field"><label for="o-customer">Customer</label><input id="o-customer" type="text" value="${esc(o.customer)}" placeholder="Name or event"></div>
         <div class="field"><label for="o-date">Date</label><input id="o-date" type="date" value="${esc(o.date)}"></div>
       </div>
-      <div class="field"><label>Cups <span class="muted" style="font-weight:400">— flavor · qty · price each</span></label><div class="lines" id="lines"></div>
-        <div><button type="button" class="btn small" id="addLine">+ Add flavor</button></div></div>
+      ${legacy ? `<p class="banner" style="margin:0">This order was logged at a per-cup price, so its total stays ${money(orderCalc(o).subtotal)} unless you add a pack below.</p>` : ""}
+      <div class="field"><label>Packs <span class="muted" style="font-weight:400">· pack · how many · total</span></label>
+        <div class="lines" id="plines"></div>
+        <div>${S.packs.length ? `<button type="button" class="btn small" id="addPack">+ Add pack</button>` : `<span class="note">Add pack sizes on the Menu tab first.</span>`}</div></div>
+      <div class="field"><label>Flavors <span class="muted" style="font-weight:400">· which flavors, and how many cups of each</span></label>
+        <div class="lines" id="flines"></div>
+        <div class="row spread"><button type="button" class="btn small" id="addFlavor">+ Add flavor</button><span class="note num" id="fhint"></span></div></div>
       <div class="fgrid">
         <div class="field"><label for="o-fee">Delivery fee charged</label><input id="o-fee" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(o.deliveryFee)}" placeholder="0.00"></div>
         <div class="field"><label for="o-disc">Discount given</label><input id="o-disc" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(o.discount)}" placeholder="0.00"></div>
@@ -579,44 +623,56 @@ table.mini td:last-child { text-align: right; }
         ${existing ? `<button type="button" class="btn danger" id="del">Delete</button>` : "<span></span>"}
         <button type="submit" class="btn primary">${existing ? "Save changes" : "Save order"}</button>
       </div>`, (f) => {
-      const linesEl = $("#lines", f);
-      const drawLines = () => { linesEl.innerHTML = o.items.map(lineHtml).join(""); sum(); };
+      const pEl = $("#plines", f), fEl = $("#flines", f);
+      const draw = () => { pEl.innerHTML = o.packs.map(pLine).join(""); fEl.innerHTML = o.items.map(fLine).join(""); sum(); };
       const sum = () => {
         o.deliveryFee = $("#o-fee", f).value; o.discount = $("#o-disc", f).value;
         const c = orderCalc(o);
-        $("#osum", f).innerHTML = `<div><span>${c.cups} cup${c.cups === 1 ? "" : "s"}</span><span>${money(c.subtotal)}</span></div>
+        pEl.querySelectorAll(".line").forEach((row, i) => { const pk = o.packs[i]; row.querySelector(".lt").textContent = money(n(pk.qty) * n(pk.price)); });
+        fEl.querySelectorAll(".line").forEach((row, i) => { const it = o.items[i]; const lt = row.querySelector(".lt"); lt.textContent = it.productId || it.cost ? money(n(it.qty) * n(it.cost)) : ""; });
+        const h = $("#fhint", f);
+        if (c.packCups) { h.textContent = c.flavorCups === c.packCups ? `All ${c.packCups} cups picked ✓` : `${c.flavorCups} of ${c.packCups} cups picked`; h.className = "note num " + (c.flavorCups === c.packCups ? "pos" : c.flavorCups > c.packCups ? "neg" : ""); }
+        else h.textContent = "";
+        $("#osum", f).innerHTML = `${o.packs.filter(p => p.packId && n(p.qty)).map(p => `<div><span>${n(p.qty)} × ${esc(p.name)}</span><span>${money(n(p.qty) * n(p.price))}</span></div>`).join("") || (legacy ? `<div><span>${c.flavorCups} cups</span><span>${money(c.subtotal)}</span></div>` : "")}
           ${n(o.deliveryFee) ? `<div><span>Delivery</span><span>${money(n(o.deliveryFee))}</span></div>` : ""}
           ${n(o.discount) ? `<div><span>Discount</span><span>${money(-n(o.discount))}</span></div>` : ""}
           <div class="big"><span>Order total</span><span>${money(c.revenue)}</span></div>
-          <div><span class="muted">Cup cost</span><span class="muted">${money(-c.cost)}</span></div>
+          <div><span class="muted">Cost of ${c.flavorCups} cup${c.flavorCups === 1 ? "" : "s"}</span><span class="muted">${money(-c.cost)}</span></div>
           <div><span><strong>Profit</strong></span><strong class="${c.profit >= 0 ? "pos" : "neg"}">${money(c.profit)}</strong></div>`;
       };
-      drawLines();
-      linesEl.addEventListener("input", (e) => {
-        const row = e.target.closest(".line"); if (!row) return; const it = o.items[+row.dataset.i]; const k = e.target.dataset.k;
-        if (k === "productId") {
-          const p = S.products.find(p => p.id === e.target.value);
-          if (p) { it.productId = p.id; it.name = p.name; it.price = n(p.price); it.cost = n(p.cost); }
-          else { it.productId = ""; it.name = ""; it.price = ""; it.cost = 0; }
-          drawLines(); return;
-        }
-        it[k] = e.target.value; sum();
+      draw();
+      pEl.addEventListener("input", (e) => {
+        const row = e.target.closest(".line"); if (!row) return; const pk = o.packs[+row.dataset.i];
+        if (e.target.dataset.k === "packId") { const p = S.packs.find(x => x.id === e.target.value); Object.assign(pk, packLine(p), { qty: pk.qty }); }
+        else pk.qty = e.target.value;
+        sum();
       });
-      linesEl.addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; o.items.splice(+b.dataset.rm, 1); if (!o.items.length) o.items.push({ productId: "", name: "", qty: 1, price: "", cost: 0 }); drawLines(); });
-      $("#addLine", f).addEventListener("click", () => {
-        const p = S.products.find(p => p.active !== false);
-        o.items.push(p ? { productId: p.id, name: p.name, qty: 1, price: n(p.price), cost: n(p.cost) } : { productId: "", name: "", qty: 1, price: "", cost: 0 });
-        drawLines();
+      fEl.addEventListener("input", (e) => {
+        const row = e.target.closest(".line"); if (!row) return; const it = o.items[+row.dataset.i];
+        if (e.target.dataset.k === "productId") {
+          const p = S.products.find(x => x.id === e.target.value);
+          it.productId = p ? p.id : ""; it.name = p ? p.name : ""; it.cost = p ? n(p.cost) : 0; it.price = 0;
+          if (p && (it.qty === "" || it.qty == null)) {
+            const c = orderCalc(o); const left = c.packCups - c.flavorCups;
+            if (left > 0) { it.qty = left; row.querySelector('[data-k="qty"]').value = left; }
+          }
+        } else it.qty = e.target.value;
+        sum();
       });
+      pEl.addEventListener("click", (e) => { const b = e.target.closest("[data-rmp]"); if (!b) return; o.packs.splice(+b.dataset.rmp, 1); draw(); });
+      fEl.addEventListener("click", (e) => { const b = e.target.closest("[data-rmf]"); if (!b) return; o.items.splice(+b.dataset.rmf, 1); if (!o.items.length) o.items.push({ productId: "", name: "", qty: "" }); draw(); });
+      $("#addPack", f)?.addEventListener("click", () => { o.packs.push(packLine(sortedPacks()[0])); draw(); });
+      $("#addFlavor", f).addEventListener("click", () => { o.items.push({ productId: "", name: "", qty: "" }); draw(); });
       ["#o-fee", "#o-disc"].forEach(s => $(s, f).addEventListener("input", sum));
       $("[data-close]", f).addEventListener("click", closeSheet);
       if (existing) armDelete($("#del", f), async () => { closeSheet(); await remove("orders/" + existing.id, "Order deleted"); });
       f.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const items = o.items.map(i => ({ productId: i.productId || "", name: (i.name || "").trim() || "Custom item", qty: n(i.qty), price: r2(n(i.price)), cost: r2(n(i.cost)) })).filter(i => i.qty > 0);
-        if (!items.length) { toast("Add at least one cup"); return; }
+        const packs = o.packs.filter(p => p.packId && n(p.qty) > 0).map(p => ({ packId: p.packId, name: p.name, cups: n(p.cups), price: r2(n(p.price)), qty: n(p.qty) }));
+        const items = o.items.filter(i => (i.productId || i.name) && n(i.qty) > 0).map(i => ({ productId: i.productId || "", name: (i.name || "").trim() || "Flavor", qty: n(i.qty), cost: r2(n(i.cost)), price: r2(n(i.price)) }));
+        if (!packs.length && !(legacy && items.length)) { toast("Add at least one pack"); return; }
         const data = {
-          date: $("#o-date", f).value || today(), customer: $("#o-customer", f).value.trim(), items,
+          date: $("#o-date", f).value || today(), customer: $("#o-customer", f).value.trim(), packs, items,
           deliveryFee: r2(n($("#o-fee", f).value)), discount: r2(n($("#o-disc", f).value)),
           payment: $("#o-pay", f).value, status: $("#o-status", f).value, notes: $("#o-notes", f).value.trim(),
           createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now(),
@@ -660,32 +716,67 @@ table.mini td:last-child { text-align: right; }
   }
 
   function productForm(existing, prefill) {
-    const p = existing || prefill || { name: "", price: "", cost: "", active: true };
+    const p = existing || prefill || { name: "", cost: "", active: true };
     openSheet(`
       <div class="row spread"><h2>${existing ? "Edit flavor" : "New flavor"}</h2><button type="button" class="btn small" data-close>Close</button></div>
       <div class="fgrid">
-        <div class="field full"><label for="p-name">Flavor name</label><input id="p-name" type="text" value="${esc(p.name)}" placeholder="e.g. Mango Cheesecake Cup"></div>
-        <div class="field"><label for="p-price">Selling price</label><input id="p-price" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(p.price)}" placeholder="0.00"></div>
+        <div class="field full"><label for="p-name">Flavor name</label><input id="p-name" type="text" value="${esc(p.name)}" placeholder="e.g. Mango Dessert Cup"></div>
         <div class="field"><label for="p-cost">Cost to make one cup</label><input id="p-cost" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(p.cost)}" placeholder="0.00"></div>
-        <div class="field full"><label for="p-active">Show in new orders</label><select id="p-active"><option value="1" ${p.active !== false ? "selected" : ""}>Yes, on the menu</option><option value="0" ${p.active === false ? "selected" : ""}>No, hide it</option></select></div>
+        <div class="field"><label for="p-active">Offer on new orders</label><select id="p-active"><option value="1" ${p.active !== false ? "selected" : ""}>Yes</option><option value="0" ${p.active === false ? "selected" : ""}>No, hide it</option></select></div>
       </div>
       <div class="sumbox num" id="psum"></div>
       <div class="sheet-actions">
         ${existing ? `<button type="button" class="btn danger" id="del">Delete</button>` : "<span></span>"}
         <button type="submit" class="btn primary">${existing ? "Save changes" : "Save flavor"}</button>
       </div>`, (f) => {
-      const sum = () => { const pr = n($("#p-price", f).value), c = n($("#p-cost", f).value), m = pr - c; $("#psum", f).innerHTML = `<div><span>Profit per cup</span><strong class="${m >= 0 ? "pos" : "neg"}">${money(m)}${pr > 0 ? " · " + Math.round(m / pr * 100) + "%" : ""}</strong></div>`; };
-      sum(); ["#p-price", "#p-cost"].forEach(s => $(s, f).addEventListener("input", sum));
+      const sum = () => {
+        const c = n($("#p-cost", f).value);
+        const rows = sortedPacks().map(k => { const m = n(k.price) - n(k.cups) * c; return `<div><span>${esc(k.name)} at ${money(n(k.price))}</span><strong class="${m >= 0 ? "pos" : "neg"}">${money(m)} profit</strong></div>`; }).join("");
+        $("#psum", f).innerHTML = rows || `<div><span class="muted">Add pack sizes on the Menu tab to see profit per pack.</span></div>`;
+      };
+      sum(); $("#p-cost", f).addEventListener("input", sum);
       $("[data-close]", f).addEventListener("click", closeSheet);
       if (existing) armDelete($("#del", f), async () => { closeSheet(); await remove("products/" + existing.id, "Flavor deleted"); });
       f.addEventListener("submit", async (e) => {
         e.preventDefault();
         const name = $("#p-name", f).value.trim(); if (!name) { toast("Give the flavor a name"); return; }
-        const data = { name, price: r2(n($("#p-price", f).value)), cost: r2(n($("#p-cost", f).value)), active: $("#p-active", f).value === "1", updatedAt: Date.now() };
+        const data = { name, cost: r2(n($("#p-cost", f).value)), active: $("#p-active", f).value === "1", updatedAt: Date.now() };
         const id = existing?.id || S.db?.collection("products").doc().id;
         if (!id) { toast("Saving isn't available in this view"); return; }
         closeSheet();
         await write("products/" + id, data, existing ? "Flavor updated" : "Flavor added");
+      });
+    });
+  }
+
+  function packForm(existing) {
+    const p = existing || { name: "", cups: "", price: "" };
+    openSheet(`
+      <div class="row spread"><h2>${existing ? "Edit pack" : "New pack"}</h2><button type="button" class="btn small" data-close>Close</button></div>
+      <div class="fgrid">
+        <div class="field"><label for="k-cups">Cups in pack</label><input id="k-cups" type="number" min="1" step="1" inputmode="numeric" value="${esc(p.cups)}" placeholder="3"></div>
+        <div class="field"><label for="k-price">Price</label><input id="k-price" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(p.price)}" placeholder="18.00"></div>
+        <div class="field full"><label for="k-name">Name <span class="muted" style="font-weight:400">· optional</span></label><input id="k-name" type="text" value="${esc(p.name)}" placeholder="3 cups"></div>
+      </div>
+      <div class="sumbox num" id="ksum"></div>
+      <div class="sheet-actions">
+        ${existing ? `<button type="button" class="btn danger" id="del">Delete</button>` : "<span></span>"}
+        <button type="submit" class="btn primary">${existing ? "Save changes" : "Save pack"}</button>
+      </div>`, (f) => {
+      const sum = () => { const c = n($("#k-cups", f).value), pr = n($("#k-price", f).value); $("#ksum", f).innerHTML = `<div><span>Price per cup</span><strong>${c ? money(pr / c) : "—"}</strong></div>`; };
+      sum(); ["#k-cups", "#k-price"].forEach(s => $(s, f).addEventListener("input", sum));
+      $("[data-close]", f).addEventListener("click", closeSheet);
+      if (existing) armDelete($("#del", f), async () => { closeSheet(); await remove("packs/" + existing.id, "Pack deleted"); });
+      f.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const cups = Math.round(n($("#k-cups", f).value)); const price = r2(n($("#k-price", f).value));
+        if (cups < 1) { toast("Enter how many cups are in the pack"); return; }
+        if (price <= 0) { toast("Enter the pack price"); return; }
+        const name = $("#k-name", f).value.trim() || `${cups} cup${cups === 1 ? "" : "s"}`;
+        const id = existing?.id || S.db?.collection("packs").doc().id;
+        if (!id) { toast("Saving isn't available in this view"); return; }
+        closeSheet();
+        await write("packs/" + id, { name, cups, price, updatedAt: Date.now() }, existing ? "Pack updated" : "Pack added");
       });
     });
   }
@@ -696,8 +787,8 @@ table.mini td:last-child { text-align: right; }
     if (!S.downloads) return;
     let rows;
     if (kind === "orders") {
-      rows = [["Date", "Customer", "Items", "Cups", "Subtotal", "Delivery fee", "Discount", "Total", "Cup cost", "Profit", "Paid by", "Status", "Notes"]];
-      [...S.orders].sort((a, b) => (a.date || "").localeCompare(b.date || "")).forEach(o => { const c = orderCalc(o); rows.push([o.date, o.customer, (o.items || []).map(i => `${n(i.qty)}x ${i.name} @ ${n(i.price)}`).join("; "), c.cups, r2(c.subtotal), n(o.deliveryFee), n(o.discount), r2(c.revenue), r2(c.cost), r2(c.profit), o.payment, o.status, o.notes]); });
+      rows = [["Date", "Customer", "Packs", "Flavors", "Cups", "Subtotal", "Delivery fee", "Discount", "Total", "Cup cost", "Profit", "Paid by", "Status", "Notes"]];
+      [...S.orders].sort((a, b) => (a.date || "").localeCompare(b.date || "")).forEach(o => { const c = orderCalc(o); rows.push([o.date, o.customer, (o.packs || []).map(p => `${n(p.qty)}x ${p.name} @ ${n(p.price)}`).join("; "), (o.items || []).map(i => `${n(i.qty)} ${i.name}`).join("; "), c.cups, r2(c.subtotal), n(o.deliveryFee), n(o.discount), r2(c.revenue), r2(c.cost), r2(c.profit), o.payment, o.status, o.notes]); });
     } else {
       rows = [["Date", "Category", "Where / what", "Amount", "Notes"]];
       [...S.expenses].sort((a, b) => (a.date || "").localeCompare(b.date || "")).forEach(e => rows.push([e.date, e.category, e.vendor, n(e.amount), e.notes]));
@@ -726,8 +817,6 @@ table.mini td:last-child { text-align: right; }
     if (bk && S.menuDraft) {
       const row = e.target.closest(".bulk-row"); const d = S.menuDraft[row.dataset.id]; if (!d) return;
       d[bk] = e.target.value;
-      const m = n(d.price) - n(d.cost); const out = row.querySelector(".bulk-m");
-      out.textContent = money(m); out.className = "num bulk-m " + (m >= 0 ? "pos" : "neg");
       return;
     }
     if (e.target.id === "q") { S.q = e.target.value; const pos = e.target.selectionStart; render(); const q = $("#q"); q.focus(); try { q.setSelectionRange(pos, pos); } catch (_) {} }
@@ -754,12 +843,12 @@ table.mini td:last-child { text-align: right; }
     setTab(S.tab);
     const timer = setTimeout(() => showStatus("Can't reach your saved data yet. What you see may be out of date."), 10000);
     let got = 0;
-    const done = (k, meta) => { if (!meta.fromCache && !S.loaded[k]) { S.loaded[k] = true; if (++got >= 3) { clearTimeout(timer); if (S.canWrite) showStatus(""); } } };
+    const done = (k, meta) => { if (!meta.fromCache && !S.loaded[k]) { S.loaded[k] = true; if (++got >= 4) { clearTimeout(timer); if (S.canWrite) showStatus(""); } } };
     const onErr = (k) => (e) => { S.loaded[k] = true; clearTimeout(timer); if (e && e.code !== "revoked") showStatus("Lost the connection to your saved data. Reload the page to reconnect."); render(); };
     const sub = (k) => db.collection(k).onSnapshot((snap) => {
       S[k] = snap.docs.map(d => ({ id: d.id, ...d.data() })); done(k, snap.metadata); render();
     }, onErr(k));
-    sub("orders"); sub("expenses"); sub("products");
+    sub("orders"); sub("expenses"); sub("products"); sub("packs");
     db.doc("settings/main").onSnapshot((d) => { if (d.exists) { S.settings = { currency: "$", ...d.data() }; render(); } }, () => {});
   })();
 })();

@@ -164,6 +164,20 @@ textarea { resize: vertical; min-height: 60px; }
 .bulk-head { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .bulk-m { text-align: right; font-size: 13px; font-weight: 600; }
 
+@media (min-width: 860px) { .grid2.even { grid-template-columns: 1fr 1fr; } }
+.goal { display: grid; gap: 6px; }
+.gtrack { height: 12px; background: var(--sunk); border-radius: 6px; overflow: hidden; }
+.gfill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--caramel), var(--accent)); }
+.gfill.met { background: var(--good); }
+.prep { display: flex; flex-wrap: wrap; gap: 8px; }
+.prep-i { display: inline-flex; align-items: center; gap: 8px; background: var(--sunk); border-radius: 10px; padding: 6px 10px 6px 6px; font-size: 14px; font-weight: 500; min-width: 0; }
+.prep-n { background: var(--ink); color: var(--bg); border-radius: 7px; min-width: 28px; padding: 2px 6px; text-align: center; font-weight: 700; }
+.time { color: var(--accent); font-weight: 700; margin-right: 4px; }
+.linklike { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+.overdue { border-color: var(--bad); }
+.minis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.mv { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+.mvs { font-size: 14px; font-weight: 500; }
 table.mini { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.mini td { padding: 6px 0; border-top: 1px solid var(--line); }
 table.mini td:last-child { text-align: right; }
@@ -188,6 +202,7 @@ table.mini td:last-child { text-align: right; }
     </div>
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" data-tab="pickups" aria-selected="false">Pickups</button>
       <button role="tab" data-tab="orders" aria-selected="false">Orders</button>
       <button role="tab" data-tab="expenses" aria-selected="false">Expenses</button>
       <button role="tab" data-tab="menu" aria-selected="false">Menu</button>
@@ -285,6 +300,7 @@ table.mini td:last-child { text-align: right; }
   function render() {
     const v = $("#view");
     if (S.tab === "overview") v.innerHTML = renderOverview();
+    else if (S.tab === "pickups") v.innerHTML = renderPickups();
     else if (S.tab === "orders") v.innerHTML = renderOrders();
     else if (S.tab === "expenses") v.innerHTML = renderExpenses();
     else v.innerHTML = renderMenu();
@@ -334,6 +350,10 @@ table.mini td:last-child { text-align: right; }
         <div class="kpi"><div class="eyebrow">Expenses</div><div class="v num">${money(spent)}</div><div class="s num">${exps.length} entr${exps.length === 1 ? "y" : "ies"}</div></div>
         <div class="kpi"><div class="eyebrow">Unpaid</div><div class="v num ${unpaid > 0 ? "neg" : ""}">${money(unpaid)}</div><div class="s num">${unpaidN} order${unpaidN === 1 ? "" : "s"} to collect</div></div>
       </div>
+      <div class="grid2 even" style="margin-top:16px">
+        <div class="panel">${goalHtml()}</div>
+        <div class="panel">${comingUpHtml()}</div>
+      </div>
       <div class="grid2" style="margin-top:16px">
         <div class="panel">
           <div class="row spread" style="margin-bottom:8px"><h3 style="margin:0">Last 6 months</h3><div class="legend"><span style="--c:var(--accent)">Sales</span><span style="--c:var(--cocoa)">Expenses</span></div></div>
@@ -361,6 +381,7 @@ table.mini td:last-child { text-align: right; }
           ${cats.length ? `<table class="mini num"><tbody>${cats.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${money(v)}</td></tr>`).join("")}</tbody></table>` : `<p class="note">No expenses logged for this period.</p>`}
         </div>
       </div>
+      <div class="panel" style="margin-top:16px">${customersHtml(orders)}</div>
       <div class="panel" style="margin-top:16px">
         <div class="row spread">
           <div><h3 style="margin:0">Export &amp; settings</h3><p class="note" style="margin:4px 0 0">Download a spreadsheet for taxes or your accountant.</p></div>
@@ -372,6 +393,159 @@ table.mini td:last-child { text-align: right; }
           </div>
         </div>
       </div>`;
+  }
+
+  // ---------- pickups, prep, goal, customers ----------
+  const addDays = (s, k) => { const [y, m, d] = s.split("-").map(Number); const x = new Date(y, m - 1, d + k); return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); };
+  const fmtTime = (t) => { if (!t) return ""; const [h, m] = t.split(":").map(Number); return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); };
+  const dayLabel = (d) => { const t = today(); if (d === t) return "Today"; if (d === addDays(t, 1)) return "Tomorrow"; const [y, m, dd] = d.split("-").map(Number); return new Date(y, m - 1, dd).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }); };
+  const custKey = (s) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+  function openPickups() {
+    return S.orders.filter(o => o.pickupDate && !o.fulfilled)
+      .sort((a, b) => (a.pickupDate + (a.pickupTime || "99")).localeCompare(b.pickupDate + (b.pickupTime || "99")));
+  }
+  function prepFor(orders) {
+    const fl = {}, pk = {}; let cups = 0;
+    for (const o of orders) {
+      for (const i of (o.items || [])) { const k = i.name || "Flavor"; fl[k] = (fl[k] || 0) + n(i.qty); cups += n(i.qty); }
+      for (const p of (o.packs || [])) { const k = p.name || "Pack"; pk[k] = (pk[k] || 0) + n(p.qty); }
+    }
+    return { cups, flavors: Object.entries(fl).sort((a, b) => b[1] - a[1]), packs: Object.entries(pk).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })) };
+  }
+  function prepHtml(p) {
+    if (!p.flavors.length) return `<p class="note" style="margin:0">No flavors picked on these orders yet.</p>`;
+    return `<div class="prep">${p.flavors.map(([k, v]) => `<div class="prep-i"><span class="prep-n num">${v}</span><span>${esc(k)}</span></div>`).join("")}</div>
+      ${p.packs.length ? `<p class="note num" style="margin:8px 0 0">Packs to box: ${p.packs.map(([k, v]) => `${v} × ${esc(k)}`).join(" · ")}</p>` : ""}`;
+  }
+  function pickupRow(o) {
+    const c = orderCalc(o);
+    const what = (o.items || []).map(i => `${n(i.qty)} ${i.name}`).join(", ") || (o.packs || []).map(p => `${n(p.qty)} × ${p.name}`).join(", ");
+    return `<div class="mrow">
+      <button type="button" class="mrow-main linklike" data-edit-order="${esc(o.id)}">
+        <span class="t"><span class="time num">${esc(fmtTime(o.pickupTime) || "Any time")}</span> ${esc(o.customer || "Walk-in")} ${o.status === "unpaid" ? `<span class="chip unpaid">Unpaid · ${money(c.revenue)}</span>` : ""}</span>
+        <span class="d">${esc(what || "No flavors yet")}${o.notes ? " · " + esc(o.notes) : ""}</span>
+      </button>
+      ${S.canWrite ? `<div class="mrow-act"><button type="button" class="btn small" data-done="${esc(o.id)}">Mark picked up</button></div>` : ""}
+    </div>`;
+  }
+
+  function renderPickups() {
+    const t = today();
+    const list = openPickups();
+    const overdue = list.filter(o => o.pickupDate < t);
+    const coming = list.filter(o => o.pickupDate >= t);
+    const week = coming.filter(o => o.pickupDate <= addDays(t, 6));
+    const wk = prepFor(week);
+    const noDate = S.orders.filter(o => !o.pickupDate && !o.fulfilled && (o.date || "") >= addDays(t, -14)).length;
+    const days = {};
+    coming.forEach(o => { (days[o.pickupDate] = days[o.pickupDate] || []).push(o); });
+    return `
+      <div class="row spread" style="margin-bottom:12px"><h2>Pickups</h2><span class="note num">${coming.length} coming up</span></div>
+      ${noDate ? `<div class="banner">${noDate} recent order${noDate === 1 ? " has" : "s have"} no pickup date. Open ${noDate === 1 ? "it" : "them"} from Orders and add one so ${noDate === 1 ? "it shows" : "they show"} here.</div>` : ""}
+      ${loadingOr("orders", `
+      <div class="panel" style="margin-top:12px">
+        <div class="row spread"><h3 style="margin:0">To make in the next 7 days</h3><span class="note num">${wk.cups} cup${wk.cups === 1 ? "" : "s"}</span></div>
+        <div style="margin-top:10px">${week.length ? prepHtml(wk) : `<p class="note" style="margin:0">Nothing due this week. Add a pickup date when you log an order and it will show here.</p>`}</div>
+      </div>
+      ${overdue.length ? `<div class="panel overdue" style="margin-top:16px">
+        <h3>Past pickup date, not marked picked up</h3>
+        <div class="list">${overdue.map(o => pickupRow(o).replace('<span class="time num">', `<span class="time num">${esc(fmtDate(o.pickupDate))} · `)).join("")}</div>
+      </div>` : ""}
+      ${Object.keys(days).sort().map(d => { const p = prepFor(days[d]); return `
+        <div class="panel" style="margin-top:16px">
+          <div class="row spread"><h3 style="margin:0">${esc(dayLabel(d))}</h3><span class="note num">${days[d].length} order${days[d].length === 1 ? "" : "s"} · ${p.cups} cups</span></div>
+          <div style="margin:10px 0 4px">${prepHtml(p)}</div>
+          <div class="list">${days[d].map(pickupRow).join("")}</div>
+        </div>`; }).join("")}`)}`;
+  }
+
+  function goalHtml() {
+    const g = S.settings.goal || {};
+    const now = new Date(); const mk = today().slice(0, 7);
+    const monthName = now.toLocaleDateString(undefined, { month: "long" });
+    const mo = S.orders.filter(o => monthKey(o.date) === mk);
+    let sales = 0, cups = 0; mo.forEach(o => { const c = orderCalc(o); sales += c.revenue; cups += c.cups; });
+    const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const left = dim - now.getDate() + 1;
+    const head = `<div class="row spread"><h3 style="margin:0">${esc(monthName)} goal</h3>${S.canWrite ? `<button type="button" class="btn small" data-goal>${g.sales || g.cups ? "Edit goal" : "Set goal"}</button>` : ""}</div>`;
+    if (!n(g.sales) && !n(g.cups)) return head + `<p class="note" style="margin:8px 0 0">Set a sales or cups target for the month and track how close you are.</p>`;
+    const bar = (label, have, want, fmt) => {
+      const pct = Math.min(100, want ? have / want * 100 : 0); const rest = Math.max(0, want - have);
+      return `<div class="goal">
+        <div class="row spread"><span class="eyebrow">${label}</span><span class="num"><strong>${fmt(have)}</strong> <span class="muted">of ${fmt(want)}</span></span></div>
+        <div class="gtrack"><div class="gfill ${pct >= 100 ? "met" : ""}" style="width:${pct}%"></div></div>
+        <div class="note num">${pct >= 100 ? "Goal reached 🎉" : `${fmt(rest)} to go · about ${fmt(Math.ceil(rest / left * 100) / 100)} a day for ${left} day${left === 1 ? "" : "s"}`}</div>
+      </div>`;
+    };
+    const cupFmt = (v) => `${Math.ceil(v)} cups`;
+    return head + `<div style="display:grid;gap:14px;margin-top:10px">
+      ${n(g.sales) ? bar("Sales", sales, n(g.sales), money) : ""}
+      ${n(g.cups) ? bar("Cups", cups, n(g.cups), cupFmt) : ""}
+    </div>`;
+  }
+
+  function comingUpHtml() {
+    const t = today();
+    const list = openPickups().filter(o => o.pickupDate >= t).slice(0, 3);
+    const over = openPickups().filter(o => o.pickupDate < t).length;
+    return `<div class="row spread"><h3 style="margin:0">Coming up</h3><button type="button" class="btn small" data-go="pickups">All pickups</button></div>
+      ${over ? `<p class="note neg" style="margin:8px 0 0">${over} past pickup${over === 1 ? "" : "s"} not marked picked up</p>` : ""}
+      ${list.length ? `<div class="list" style="margin-top:6px">${list.map(o => `<button type="button" class="item" data-edit-order="${esc(o.id)}">
+          <span class="t">${esc(o.customer || "Walk-in")}</span><span class="a num">${esc(o.pickupDate === t ? "Today" : o.pickupDate === addDays(t, 1) ? "Tomorrow" : fmtDate(o.pickupDate))}</span>
+          <span class="d">${esc((o.items || []).map(i => `${n(i.qty)} ${i.name}`).join(", ") || "No flavors yet")}</span><span class="p num muted">${esc(fmtTime(o.pickupTime))}</span>
+        </button>`).join("")}</div>` : `<p class="note" style="margin:8px 0 0">No pickups scheduled. Add a pickup date when you log an order.</p>`}`;
+  }
+
+  function customersHtml(orders) {
+    const all = {};
+    for (const o of S.orders) { const k = custKey(o.customer); if (k) all[k] = (all[k] || 0) + 1; }
+    const per = {}; let walk = 0;
+    for (const o of orders) {
+      const k = custKey(o.customer); if (!k) { walk++; continue; }
+      const c = orderCalc(o);
+      per[k] = per[k] || { name: o.customer.trim(), orders: 0, spent: 0, cups: 0 };
+      per[k].orders++; per[k].spent += c.revenue; per[k].cups += c.cups;
+    }
+    const keys = Object.keys(per);
+    const repeat = keys.filter(k => all[k] >= 2).length;
+    const top = keys.map(k => [k, per[k]]).sort((a, b) => b[1].spent - a[1].spent).slice(0, 5);
+    const named = orders.length - walk;
+    return `<h3>Customers</h3>
+      <div class="minis">
+        <div><div class="eyebrow">Customers</div><div class="mv num">${keys.length}</div></div>
+        <div><div class="eyebrow">Came back</div><div class="mv num">${repeat}${keys.length ? ` <span class="muted mvs">${Math.round(repeat / keys.length * 100)}%</span>` : ""}</div></div>
+        <div><div class="eyebrow">Orders each</div><div class="mv num">${keys.length ? (named / keys.length).toFixed(1) : "—"}</div></div>
+      </div>
+      ${top.length ? `<table class="mini num" style="margin-top:10px"><tbody>${top.map(([k, v]) => `<tr><td>${esc(v.name)} ${all[k] >= 2 ? `<span class="chip paid">Repeat</span>` : ""}<div class="note">${all[k]} order${all[k] === 1 ? "" : "s"} all-time · ${v.cups} cups this period</div></td><td>${money(v.spent)}</td></tr>`).join("")}</tbody></table>` : `<p class="note">Add the customer's name on each order to see who your regulars are.</p>`}
+      ${walk ? `<p class="note" style="margin:8px 0 0">${walk} order${walk === 1 ? "" : "s"} without a customer name.</p>` : ""}`;
+  }
+
+  function goalForm() {
+    const g = S.settings.goal || {};
+    openSheet(`
+      <div class="row spread"><h2>Monthly goal</h2><button type="button" class="btn small" data-close>Close</button></div>
+      <p class="note" style="margin:0">Used every month until you change it. Leave a box empty to skip it.</p>
+      <div class="fgrid">
+        <div class="field"><label for="g-sales">Sales target</label><input id="g-sales" type="number" min="0" step="1" inputmode="decimal" value="${esc(g.sales || "")}" placeholder="500"></div>
+        <div class="field"><label for="g-cups">Cups target</label><input id="g-cups" type="number" min="0" step="1" inputmode="numeric" value="${esc(g.cups || "")}" placeholder="100"></div>
+      </div>
+      <div class="sheet-actions"><span></span><button type="submit" class="btn primary">Save goal</button></div>`, (f) => {
+      $("[data-close]", f).addEventListener("click", closeSheet);
+      f.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const goal = { sales: r2(n($("#g-sales", f).value)), cups: Math.round(n($("#g-cups", f).value)) };
+        closeSheet();
+        S.settings = { ...S.settings, goal }; render();
+        await write("settings/main", { ...S.settings }, "Goal saved");
+      });
+    });
+  }
+
+  async function markDone(id) {
+    const o = S.orders.find(x => x.id === id); if (!o || !S.db) return;
+    try { await S.db.doc("orders/" + id).update({ fulfilled: true, fulfilledAt: Date.now() }); toast(`${o.customer || "Order"} marked picked up`); }
+    catch (e) { handleWriteError(e); }
   }
 
   function renderChart() {
@@ -420,9 +594,9 @@ table.mini td:last-child { text-align: right; }
           const c = orderCalc(o);
           const what = [(o.packs || []).map(p => `${n(p.qty)} × ${p.name}`).join(", "), (o.items || []).map(i => `${n(i.qty)} ${i.name || "?"}`).join(", ")].filter(Boolean).join(" · ");
           return `<button class="item" type="button" data-edit-order="${esc(o.id)}">
-            <span class="t">${esc(o.customer || "Walk-in")} <span class="chip ${o.status === "unpaid" ? "unpaid" : "paid"}">${o.status === "unpaid" ? "Unpaid" : "Paid"}</span></span>
+            <span class="t">${esc(o.customer || "Walk-in")} <span class="chip ${o.status === "unpaid" ? "unpaid" : "paid"}">${o.status === "unpaid" ? "Unpaid" : "Paid"}</span>${o.fulfilled ? ` <span class="chip ex">Picked up</span>` : ""}</span>
             <span class="a num">${money(c.revenue)}</span>
-            <span class="d">${esc(fmtDate(o.date))} · ${esc(what || "No items")}</span>
+            <span class="d">${esc(fmtDate(o.date))}${o.pickupDate ? ` · pickup ${esc(fmtDate(o.pickupDate))}${o.pickupTime ? " " + esc(fmtTime(o.pickupTime)) : ""}` : ""} · ${esc(what || "No items")}</span>
             <span class="p num ${c.profit >= 0 ? "pos" : "neg"}">${money(c.profit, true)} profit</span>
           </button>`;
         }).join("")}</div>` : `<div class="empty">${cupSvg}<div>${S.orders.length ? "No orders match this period or search." : "No orders yet. Tap <strong>+ New order</strong> to log one."}</div></div>`)}
@@ -601,9 +775,13 @@ table.mini td:last-child { text-align: right; }
     openSheet(`
       <div class="row spread"><h2>${existing ? "Edit order" : "New order"}</h2><button type="button" class="btn small" data-close>Close</button></div>
       <div class="fgrid">
-        <div class="field"><label for="o-customer">Customer</label><input id="o-customer" type="text" value="${esc(o.customer)}" placeholder="Name or event"></div>
-        <div class="field"><label for="o-date">Date</label><input id="o-date" type="date" value="${esc(o.date)}"></div>
+        <div class="field"><label for="o-customer">Customer</label><input id="o-customer" type="text" list="custlist" autocomplete="off" value="${esc(o.customer)}" placeholder="Name or event"></div>
+        <div class="field"><label for="o-date">Order date</label><input id="o-date" type="date" value="${esc(o.date)}"></div>
+        <div class="field"><label for="o-pdate">Pickup date</label><input id="o-pdate" type="date" value="${esc(o.pickupDate || "")}"></div>
+        <div class="field"><label for="o-ptime">Pickup time</label><input id="o-ptime" type="time" value="${esc(o.pickupTime || "")}"></div>
+        ${existing ? `<div class="field full"><label for="o-done">Picked up?</label><select id="o-done"><option value="0" ${o.fulfilled ? "" : "selected"}>Not yet</option><option value="1" ${o.fulfilled ? "selected" : ""}>Yes, picked up or delivered</option></select></div>` : ""}
       </div>
+      <datalist id="custlist">${[...new Set(S.orders.map(x => (x.customer || "").trim()).filter(Boolean))].sort().map(c => `<option value="${esc(c)}"></option>`).join("")}</datalist>
       ${legacy ? `<p class="banner" style="margin:0">This order was logged at a per-cup price, so its total stays ${money(orderCalc(o).subtotal)} unless you add a pack below.</p>` : ""}
       <div class="field"><label>Packs <span class="muted" style="font-weight:400">· pack · how many · total</span></label>
         <div class="lines" id="plines"></div>
@@ -673,6 +851,7 @@ table.mini td:last-child { text-align: right; }
         if (!packs.length && !(legacy && items.length)) { toast("Add at least one pack"); return; }
         const data = {
           date: $("#o-date", f).value || today(), customer: $("#o-customer", f).value.trim(), packs, items,
+          pickupDate: $("#o-pdate", f).value, pickupTime: $("#o-ptime", f).value, fulfilled: existing ? $("#o-done", f).value === "1" : false,
           deliveryFee: r2(n($("#o-fee", f).value)), discount: r2(n($("#o-disc", f).value)),
           payment: $("#o-pay", f).value, status: $("#o-status", f).value, notes: $("#o-notes", f).value.trim(),
           createdAt: existing?.createdAt || Date.now(), updatedAt: Date.now(),
@@ -787,8 +966,8 @@ table.mini td:last-child { text-align: right; }
     if (!S.downloads) return;
     let rows;
     if (kind === "orders") {
-      rows = [["Date", "Customer", "Packs", "Flavors", "Cups", "Subtotal", "Delivery fee", "Discount", "Total", "Cup cost", "Profit", "Paid by", "Status", "Notes"]];
-      [...S.orders].sort((a, b) => (a.date || "").localeCompare(b.date || "")).forEach(o => { const c = orderCalc(o); rows.push([o.date, o.customer, (o.packs || []).map(p => `${n(p.qty)}x ${p.name} @ ${n(p.price)}`).join("; "), (o.items || []).map(i => `${n(i.qty)} ${i.name}`).join("; "), c.cups, r2(c.subtotal), n(o.deliveryFee), n(o.discount), r2(c.revenue), r2(c.cost), r2(c.profit), o.payment, o.status, o.notes]); });
+      rows = [["Date", "Customer", "Packs", "Flavors", "Cups", "Subtotal", "Delivery fee", "Discount", "Total", "Cup cost", "Profit", "Paid by", "Status", "Pickup date", "Pickup time", "Picked up", "Notes"]];
+      [...S.orders].sort((a, b) => (a.date || "").localeCompare(b.date || "")).forEach(o => { const c = orderCalc(o); rows.push([o.date, o.customer, (o.packs || []).map(p => `${n(p.qty)}x ${p.name} @ ${n(p.price)}`).join("; "), (o.items || []).map(i => `${n(i.qty)} ${i.name}`).join("; "), c.cups, r2(c.subtotal), n(o.deliveryFee), n(o.discount), r2(c.revenue), r2(c.cost), r2(c.profit), o.payment, o.status, o.pickupDate || "", o.pickupTime || "", o.fulfilled ? "yes" : "no", o.notes]); });
     } else {
       rows = [["Date", "Category", "Where / what", "Amount", "Notes"]];
       [...S.expenses].sort((a, b) => (a.date || "").localeCompare(b.date || "")).forEach(e => rows.push([e.date, e.category, e.vendor, n(e.amount), e.notes]));
@@ -805,7 +984,10 @@ table.mini td:last-child { text-align: right; }
     const t = e.target;
     const per = t.closest("[data-period]"); if (per) { S.period = per.dataset.period; try { localStorage.setItem("lbs-period", S.period); } catch (_) {} render(); return; }
     const ex = t.closest("[data-export]"); if (ex) { exportCsv(ex.dataset.export); return; }
+    const go = t.closest("[data-go]"); if (go) { setTab(go.dataset.go); window.scrollTo(0, 0); return; }
     if (!S.canWrite) return;
+    const dn = t.closest("[data-done]"); if (dn) { markDone(dn.dataset.done); return; }
+    if (t.closest("[data-goal]")) { goalForm(); return; }
     const mb = t.closest("[data-menu]"); if (mb) { menuAction(mb.dataset.menu); return; }
     const pa = t.closest("[data-prod-act]"); if (pa) { menuAction(pa.dataset.prodAct, pa.dataset.id); return; }
     const eo =t.closest("[data-edit-order]"); if (eo) { const o = S.orders.find(x => x.id === eo.dataset.editOrder); o && orderForm(o); return; }

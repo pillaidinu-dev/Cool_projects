@@ -48,10 +48,12 @@ steals and blocks, each with the player's full stat line. Polls every 30 seconds
    A slate is **frozen once any of its games tips off**, so every graded prop was a real
    pre-game call.
 
-`.github/workflows/nba-daily.yml` runs it on a schedule: at about 7, 9 and 11am ET (grade
-last night, project today) and 4:47 and 6:47pm ET (re-project before tip-off with the latest
-injury news). GitHub delays and sometimes skips scheduled runs, so the extra slots are backups;
-each run only fetches what's new, and a slate that has tipped off is never overwritten. If the
+`.github/workflows/nba-daily.yml` runs it hourly from early morning until tip-off (about
+5am-6pm ET in winter): the first run of the day grades last night and projects today, and later
+ones refresh the projections with the latest injury news. GitHub delays and drops most scheduled
+runs, so the hourly slots are there to make sure at least one lands each morning. Runs are cheap
+and safe: each only fetches what's new, a slate projected in the last 3 hours is left alone, and
+a slate that has tipped off is never overwritten. If the
 dashboard is ever showing an earlier day's slate, it says so in a banner. It
 then **commits `nba-dashboard/data/` to main**, so the props and results build up in git. You
 can also start a run by hand from the Actions tab (**Run workflow**). GitHub only runs

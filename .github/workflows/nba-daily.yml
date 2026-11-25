@@ -6,12 +6,15 @@ name: NBA daily props
 # commits nba-dashboard/data/ so every day's props and results accumulate in
 # the repo.
 #
-# GitHub delays scheduled runs by minutes to hours and sometimes skips them
-# outright (on 2026-10-22 the morning run never started), so there are
-# several slots rather than one each. Extra runs are cheap and safe: each
-# only fetches dates it hasn't stored, and a slate that has tipped off is
-# frozen. Times are UTC — 11:17/13:17/15:17 ≈ 7/9/11am ET and 20:47/22:47 ≈
-# 4:47/6:47pm ET (an hour earlier in winter).
+# GitHub delays scheduled runs by hours and drops most of them outright:
+# through November 2026 only about 2 of 5 daily slots ever ran, usually
+# in the evening, so mornings often went by without the day's slate. So it
+# runs hourly from early morning to tip-off: any one of them loading the
+# slate is enough. Extra runs are cheap and safe: each only fetches dates
+# it hasn't stored, a slate projected in the last 3 hours is left alone
+# (so there's no hourly commit of the same projections), and a slate that
+# has tipped off is frozen. Times are UTC: 10:17 through 23:17 is about
+# 5:17am through 6:17pm ET in winter (6:17am through 7:17pm in summer).
 #
 # GitHub only runs scheduled (and manually dispatched) workflows from the
 # repo's *default* branch, so this file has to be on that branch for those
@@ -23,8 +26,7 @@ name: NBA daily props
 # the paths below anyway.
 on:
   schedule:
-    - cron: '17 11,13,15 * * *'
-    - cron: '47 20,22 * * *'
+    - cron: '17 10-23 * * *'
   workflow_dispatch:
   push:
     branches: [main]

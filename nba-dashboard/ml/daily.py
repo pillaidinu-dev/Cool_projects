@@ -35,6 +35,10 @@ from projections import build_projections, build_slate
 
 DEFAULT_DATA_DIR = Path(os.environ.get("NBA_DATA_DIR") or Path(__file__).resolve().parent.parent / "data")
 HISTORY_DAYS = 400
+# The workflow runs hourly (GitHub drops most scheduled runs, so it needs
+# many chances). A slate projected this recently is left alone, so those
+# runs don't commit a fresh copy of the same projections every hour.
+REPROJECT_AFTER_HOURS = 3
 
 
 def eastern_today():
@@ -58,6 +62,14 @@ def _write_latest(data_dir, today):
         doc["note"] = f"No NBA games on {today.isoformat()} — showing the most recent slate ({doc['date']})."
     (Path(data_dir) / "latest.json").write_text(json.dumps(doc, separators=(",", ":")))
     return doc["date"]
+
+
+def _hours_since_generated(path):
+    try:
+        generated = datetime.fromisoformat(json.loads(path.read_text())["generatedAt"])
+    except (KeyError, ValueError, json.JSONDecodeError):
+        return float("inf")
+    return (datetime.now(timezone.utc) - generated).total_seconds() / 3600
 
 
 def _write_index(data_dir):
@@ -85,6 +97,8 @@ def run(data_dir, today, client=espn_client, force=False, is_sample=False, log=_
         status = "no history yet"
     elif out.exists() and started and not force:
         status = "kept (slate already tipped off)"
+    elif out.exists() and not force and _hours_since_generated(out) < REPROJECT_AFTER_HOURS:
+        status = f"kept (projected under {REPROJECT_AFTER_HOURS}h ago)"
     else:
         form = player_form(logs, today)
         slate = build_slate(games, client, form, today, log=log)

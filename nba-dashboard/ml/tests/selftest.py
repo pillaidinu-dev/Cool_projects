@@ -94,7 +94,12 @@ def test_pipeline():
         assert json.loads((data / "latest.json").read_text())["date"] == today.isoformat()
         assert json.loads((data / "index.json").read_text())["dates"] == [p.stem for p in reversed(slates)]
 
-        # Re-running after tip-off must not overwrite the frozen slate.
+        # An hourly re-run soon after projecting leaves the slate alone (no
+        # hourly commit of identical projections)...
+        again = daily.run(data, today, client=FakeESPN(start, days=45, now=today), log=quiet)
+        assert again["slate"].startswith("kept (projected under"), again
+
+        # ...and re-running after tip-off must not overwrite the frozen slate.
         before = (data / "projections" / f"{today.isoformat()}.json").read_text()
         started = FakeESPN(start, days=45, now=today + timedelta(days=1))
         summary = daily.run(data, today, client=started, log=quiet)
